@@ -110,14 +110,14 @@ function WholeBrain_RSA()
   allzero = any(X); % Identify columns with data
   [~, reduxFilter] = removeOutliers(X);
   % Note: reduxFilter field names are reversed...
-  ind = ind & reduxFilter.voxels';
-  vox = allzero & reduxFilter.words;
+  ind = ind & reduxFilter.words';
+  vox = allzero & reduxFilter.voxels;
   X = X(ind,vox);
 
   if isfield(ydat, 'cvfile')
     cvpath = fullfile(cvdir,cvfile);
     load(cvpath, 'CV');
-    outlying_words = reduxFilter.voxels(ind);
+    outlying_words = reduxFilter.words(ind);
     cvind = CV(outlying_words, ydat.cvscheme);
     holdout = cvind == ydat.cvholdout;
     X(holdout,:) = [];

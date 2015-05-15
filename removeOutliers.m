@@ -4,8 +4,8 @@ function [Aredux, reduxFilter]=removeOutliers(A)
 % columns, and then rows.  Each time outliers are removed, the reduced data
 % is checked again for outliers, until no outliers remain.
 
-    reduxFilter.voxels=true(1,size(A,1));
-    reduxFilter.words=true(1,size(A,2));
+    reduxFilter.words=true(1,size(A,1));
+    reduxFilter.voxels=true(1,size(A,2));
     index.row = 1:size(A,1);
     index.col = 1:size(A,2);
     Aredux=A;
@@ -21,7 +21,7 @@ function [Aredux, reduxFilter]=removeOutliers(A)
         outVector = abs(zscore(mean(Aredux,1))) > 5;
         outCount = sum(outVector);
     end
-    reduxFilter.words(outliers) = false;
+    reduxFilter.voxels(outliers) = false;
 
     % For rows...
     outVector = abs(zscore(mean(Aredux,2))) > 5;
@@ -36,5 +36,5 @@ function [Aredux, reduxFilter]=removeOutliers(A)
         outVector = outVector'; % Mean by row creates a vector n-by-1 instead of 1-by-n.
         outCount = sum(outVector);
     end
-    reduxFilter.voxels(outliers) = false;
+    reduxFilter.words(outliers) = false;
 end
