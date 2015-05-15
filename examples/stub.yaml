@@ -1,0 +1,52 @@
+---
+data:
+  - /crcox/MRI/MCW/animals/s314.mat
+  - /crcox/MRI/MCW/animals/s1225.mat
+  - /crcox/MRI/MCW/animals/s1407.mat
+  - /crcox/MRI/MCW/animals/s1577.mat
+  - /crcox/MRI/MCW/animals/s2177.mat
+  - /crcox/MRI/MCW/animals/s2184.mat
+  - /crcox/MRI/MCW/animals/s2199.mat
+  - /crcox/MRI/MCW/animals/s2200.mat
+  - /crcox/MRI/MCW/animals/s2202.mat
+  - /crcox/MRI/MCW/animals/s2227.mat
+  - /crcox/MRI/MCW/animals/s2232.mat
+  - /crcox/MRI/MCW/animals/s2347.mat
+  - /crcox/MRI/MCW/animals/s3283.mat
+  - /crcox/MRI/MCW/animals/s3303.mat
+metadata:
+  - /crcox/MRI/MCW/animals/metadata.mat
+lambda: [0.1, 1, 10, 100, 1000]
+targets: "animals"
+Gtype: "L1L2"
+executable: "/home/crcox/src/WholeBrain_RSA/bin/WholeBrain_RSA"
+normalize: True
+reptype: "semantic"
+
+# CV_schemes contains an 88x100 matrix (items by schemes) where each column is
+# a random permutation of the numbers 1--22. Rows corresponding to the same
+# number belong to the same cross-validation block under that scheme. These
+# schemes are pre-specified so that it is possible to perfectly re-create
+# results, and also makes it easy to hold out a cv block to use as an
+# evaluation set for a final model which uses parameters tuned with knowledge
+# of only the other 21 blocks.
+cvscheme: 1
+cvholdout: 1
+cvfile: "/crcox/MRI/MCW/animals/CV_schemes.mat"
+
+# Fields listed here will be expanded if this file is passed to expand stub.
+ExpandFields:
+  - data
+  - lambda
+
+# If true, then Uz will be generated randomly to test the execution of
+# everything other than Adlas1().
+debug: True
+
+# This code may be run in several environments, with different directory
+# structures. Each one of those environments can be accounted for as a case
+# within the code. Currently, there are condor, chris, and urvashi
+# environments.
+environment: condor
+...
+

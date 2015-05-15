@@ -1,0 +1,30 @@
+# Specify in KB, MB, or GB.
+# No space between numbers and letters.
+request_memory: "8GB"
+request_disk: "10GB"
+
+# If your jobs are less than 4 hours long, "flock" them additionally to
+# other HTCondor pools on campus.
+# If your jobs are less than ~2 hours long, "glide" them to the national
+# Open Science Grid (OSG) for access to even more computers and the
+# fastest overall throughput.
+FLOCK: "false"
+GLIDE: "false"
+
+# This probably should be an absolute path...
+SHAREDIR: "shared"
+
+# The "executable" is the main program that will be executed on the remote job.
+WRAPPER: "shared/run_WholeBrain_RSA.sh" # path relative to submit node.
+EXECUTABLE: "WholeBrain_RSA" # path relative to execute node.
+
+#PRESCRIPT: "/home/crcox/src/aae_modeling_scripts/condor/prescript.sh"
+#POSTSCRIPT: "/home/crcox/src/aae_modeling_scripts/condor/postscript.sh"
+
+# This should be a list of positional arguments to the executabe.
+execPArgs:
+  #  - 1
+  #  - 2
+# This should be a list of key-value paired arguments to the executable.
+execKVArgs:
+  #foo: bar
