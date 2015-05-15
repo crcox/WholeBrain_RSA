@@ -15,10 +15,10 @@ mkdir data/
 cd data/
 while read url; do
   wget -q "http://proxy.chtc.wisc.edu/SQUID/${url}"
-done < URLS
+done < ../URLS
 while read url; do
   wget -q "http://proxy.chtc.wisc.edu/SQUID/${url}"
-done < URLS_SHARED
+done < ../URLS_SHARED
 cd ../
 
 echo "BEFORE RUNNING"
