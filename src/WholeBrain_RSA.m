@@ -5,7 +5,7 @@ function WholeBrain_RSA()
   %@subject = '03' for subject 03
 
   % ----------------------Set parameters-----------------------------------------------
-  ydat = ReadYaml('params.yaml')
+  ydat = loadjson('params.json')
   DEBUG = ydat.debug;
   Gtype = ydat.Gtype;
   lambda_in = ydat.lambda;
