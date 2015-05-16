@@ -1,6 +1,6 @@
 MCC=/usr/local/MATLAB/R2013b/bin/mcc
 MEX=/usr/local/MATLAB/R2013b/bin/mex
-MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm
+MFLAGS=-m -R -singleCompThread -R -nodisplay -R
 SRCDIR=.
 IDIRS=
 .PHONEY: clean clean-all all source_code.tar.gz extract
@@ -14,12 +14,12 @@ extract:
 	-mkdir source_code/
 	tar xzf source_code.tar.gz -C ./source_code/
 
-WholeBrain_RSA: $(SRCDIR)/runWholeBrain_RSA.m
-	$(MCC) $(MFLAGS) $(IDIRS) -o $@ runWholeBrain_RSA.m 
+WholeBrain_RSA: $(SRCDIR)/WholeBrain_RSA.m
+	$(MCC) $(MFLAGS) $(IDIRS) -o $@ WholeBrain_RSA.m 
 
 binaries.tar.gz: WholeBrain_RSA run_WholeBrain_RSA.sh
 	mkdir bin/
-	mv WholeBrain_RSA run_WholeBrain_RSA.sh bin/
+	mv WholeBrain_RSA WholeBrain_RSA.sh bin/
 	tar czvf $@ bin/
 
 clean:

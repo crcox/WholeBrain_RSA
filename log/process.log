@@ -22,3 +22,27 @@
 	   Disk (KB)            :     1973       37   8216312
 	   Memory (MB)          :        0        1         1
 ...
+000 (454101.000.000) 05/15 12:51:09 Job submitted from host: <128.104.101.92:9618?addrs=128.104.101.92:9618&noUDP&sock=2086_b70d_3>
+...
+001 (454101.000.000) 05/15 12:52:15 Job executing on host: <128.104.101.10:50869>
+...
+006 (454101.000.000) 05/15 13:29:07 Image size of job updated: 4072
+	0  -  MemoryUsage of job (MB)
+	0  -  ResidentSetSize of job (KB)
+...
+005 (454101.000.000) 05/15 13:29:08 Job terminated.
+	(0) Abnormal termination (signal 15)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	578888  -  Run Bytes Sent By Job
+	255540  -  Run Bytes Received By Job
+	578888  -  Total Bytes Sent By Job
+	255540  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated
+	   Cpus                 :                 1         1
+	   Disk (KB)            :     2889      300   8228890
+	   Memory (MB)          :        0        1         1
+...
