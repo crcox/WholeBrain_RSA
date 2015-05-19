@@ -1,6 +1,7 @@
 function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG)
   [n,d] = size(V);
-  V_org = V;
+  V_org = [V, ones(n,1)];
+  d = d + 1;
 
   tt = 0;
   nt = n - tt;
@@ -19,6 +20,9 @@ function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_enc
   %% preprocessing
 
   %square root
+  % Higher values of the second parameter will lead to lower-rank matrices
+  % because it permits more error between the truncated and the original
+  % matrix.
   [C, r] = sqrt_truncate_r(S, 0.2);
 
   for i = 1:ncv
