@@ -1,6 +1,6 @@
 MCC=/usr/local/MATLAB/R2013b/bin/mcc
 MEX=/usr/local/MATLAB/R2013b/bin/mex
-MFLAGS=-m -R -singleCompThread -R -nodisplay -R
+MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm
 SRCDIR=.
 IDIRS=
 .PHONEY: clean clean-all all source_code.tar.gz extract
