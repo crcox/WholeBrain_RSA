@@ -11,3 +11,4 @@ mv ./src/src/* build/
 mv Makefile build/
 
 cd build/
+find ../src/dependencies/jsonlab/ -type f -exec cp '{}' . \;
