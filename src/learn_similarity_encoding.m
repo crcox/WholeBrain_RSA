@@ -1,4 +1,4 @@
-function [UzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG)
+function [UzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG, opts)
   [n,d] = size(V);
   V_org = [V, ones(n,1)];
   V_org = V;
