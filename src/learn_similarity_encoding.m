@@ -1,4 +1,4 @@
-function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG, opts)
+function [UzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG)
   [n,d] = size(V);
   V_org = [V, ones(n,1)];
   V_org = V;
@@ -51,7 +51,7 @@ function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_enc
           Uz = Adlas1(V1, C1, lambda,opts);
         end
       end
-      UzCell{i,j} = Uz;
+      UzAll{i,j} = Uz;
       fprintf('%.2f ', lambda)
 
       k1  = sum(any(Uz,2));
