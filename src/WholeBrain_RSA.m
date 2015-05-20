@@ -5,16 +5,22 @@ function WholeBrain_RSA()
   %@subject = '03' for subject 03
 
   % ----------------------Set parameters-----------------------------------------------
-  ydat = loadjson('params.json')
-  DEBUG = ydat.debug;
-  Gtype = ydat.Gtype;
-  lambda_in = ydat.lambda;
-  normalize = ydat.normalize
-  AVS = ydat.reptype;
-  targets = ydat.targets;
-  datafile = ydat.data;
-  cvfile = ydat.cvfile;
-  metafile = ydat.metadata;
+  jdat = loadjson('params.json')
+  DEBUG = jdat.debug;
+  Gtype = jdat.Gtype;
+  lambda_in = jdat.lambda;
+  normalize = jdat.normalize
+  AVS = jdat.reptype;
+  targets = jdat.targets;
+  datafile = jdat.data;
+  cvfile = jdat.cvfile;
+  metafile = jdat.metadata;
+  if isfield(jdat,'AdlasOpts')
+    opts = jdat.AdlasOpts;
+  else
+    opts = struct();
+  end
+
   if iscell(datafile)
     if length(datafile) == 1
       datafile = datafile{1};
@@ -26,11 +32,11 @@ function WholeBrain_RSA()
     end
   end
 
-  switch ydat.environment
+  switch jdat.environment
   case 'condor'
     root = './';
-    if isfield(ydat,'datadir')
-      datadir = ydat.datadir
+    if isfield(jdat,'datadir')
+      datadir = jdat.datadir
     else
       [ddir,dname,ext] = fileparts(datafile);
       datadir = fullfile(root,ddir);
@@ -53,7 +59,7 @@ function WholeBrain_RSA()
     datadir = fullfile(root,'data');
 
   otherwise
-    error('Environment %s not implemented.', ydat.environment);
+    error('Environment %s not implemented.', jdat.environment);
 
   end
 
@@ -114,18 +120,19 @@ function WholeBrain_RSA()
   vox = allzero & reduxFilter.voxels;
   X = X(ind,vox);
 
-  if isfield(ydat, 'cvfile')
+  if isfield(jdat, 'cvfile')
     cvpath = fullfile(cvdir,cvfile);
     load(cvpath, 'CV');
     outlying_words = reduxFilter.words(ind);
-    cvind = CV(outlying_words, ydat.cvscheme);
-    holdout = cvind == ydat.cvholdout;
+    cvind = CV(outlying_words, jdat.cvscheme);
+    holdout = cvind == jdat.cvholdout;
     X(holdout,:) = [];
     cvind(holdout) = [];
-    cvind(cvind>ydat.cvholdout) = cvind(cvind>ydat.cvholdout) - 1;
+    cvind(cvind>jdat.cvholdout) = cvind(cvind>jdat.cvholdout) - 1;
 
+  end
   else
-    ncv = ydat.ncv;
+    ncv = jdat.ncv;
     [n,d] = size(X);
     cvind = mod(1:n, ncv)+1;
     cvind = cvind(randperm(n));
@@ -155,7 +162,7 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [Uz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, normalize, Gtype, DEBUG);
+  [Uz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, normalize, Gtype, DEBUG, opts);
 
   fprintf('Saving stuff.....\n');
 

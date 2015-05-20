@@ -63,14 +63,15 @@ t0 = tic();
 % -------------------------------------------------------------
 if (nargin <  4), options = struct(); end;
 
-iterations = getDefaultField(options,'iterations',100000);
-verbosity  = getDefaultField(options,'verbosity',0);
-fid        = getDefaultField(options,'fid',1);
-optimIter  = getDefaultField(options,'optimIter',1);
-gradIter   = getDefaultField(options,'gradIter',20);
-tolInfeas  = getDefaultField(options,'tolInfeas',1e-6);
-tolRelGap  = getDefaultField(options,'tolRelGap',1e-8);
-xInit      = getDefaultField(options,'xInit',[]);
+iterations    = getDefaultField(options,'iterations',100000);
+miniterations = getDefaultField(options,'miniterations',0);
+verbosity     = getDefaultField(options,'verbosity',0);
+fid           = getDefaultField(options,'fid',1);
+optimIter     = getDefaultField(options,'optimIter',1);
+gradIter      = getDefaultField(options,'gradIter',20);
+tolInfeas     = getDefaultField(options,'tolInfeas',1e-6);
+tolRelGap     = getDefaultField(options,'tolRelGap',1e-8);
+xInit         = getDefaultField(options,'xInit',[]);
 
 % Ensure that lambda is non-increasing
 if ((length(lambda) > 1) && any(lambda(2:end) > lambda(1:end-1)))
@@ -178,7 +179,8 @@ while (true)
 
       % Check primal-dual gap
       if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
-          (infeas < tolInfeas * lambda(1)))
+          (infeas < tolInfeas * lambda(1)) && ...
+		  iter > miniterations) % CRC: Added so we could force more iterations.
          status = STATUS_OPTIMAL;
       end
 
