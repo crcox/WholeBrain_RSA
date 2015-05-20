@@ -17,6 +17,16 @@ function WholeBrain_RSA()
   metafile = jdat.metadata;
   if isfield(jdat,'AdlasOpts')
     opts = jdat.AdlasOpts;
+    % If values originated in a YAML file, and scientific notation is used, the
+    % value may have been parsed as a string. Check and correct.
+    if isfield(opts, 'tolInfeas')
+        opts.tolInfeas = sscanf(opts.tolInfeas, '%e');
+    end
+    if isfield(opts, 'tolRelGap')
+      if ~isnumeric(opts.tolRelGap)
+        opts.tolRelGap = sscanf(opts.tolRelGap, '%e');
+      end
+    end
   else
     opts = struct();
   end

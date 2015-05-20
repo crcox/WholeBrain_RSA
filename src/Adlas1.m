@@ -180,7 +180,7 @@ while (true)
       % Check primal-dual gap
       if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
           (infeas < tolInfeas * lambda(1)) && ...
-		  iter > miniterations) % CRC: Added so we could force more iterations.
+          iter > miniterations) % CRC: Added so we could force more iterations.
          status = STATUS_OPTIMAL;
       end
 
