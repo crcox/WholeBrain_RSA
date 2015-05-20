@@ -39,6 +39,20 @@ ExpandFields:
   - data
   - lambda
 
+# There are many optional parameters that can be specified and provided to
+# Adlas(), the function that runs the group lasso. You may specify any of those
+# values here. See the Adlas1() for details on each.
+AdlasOpts: 
+    iterations: 100000
+    miniterations: 0
+    verbosity: 0
+    fid: 1
+    optimIter: 1
+    gradIter: 20
+    tolInfeas: 1e-7
+    tolRelGap: 1e-7
+    xInit: []
+
 # If true, then Uz will be generated randomly to test the execution of
 # everything other than Adlas1().
 debug: True

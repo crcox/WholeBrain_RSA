@@ -130,7 +130,6 @@ function WholeBrain_RSA()
     cvind(holdout) = [];
     cvind(cvind>jdat.cvholdout) = cvind(cvind>jdat.cvholdout) - 1;
 
-  end
   else
     ncv = jdat.ncv;
     [n,d] = size(X);
