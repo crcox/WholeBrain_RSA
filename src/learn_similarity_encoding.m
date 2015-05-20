@@ -1,5 +1,6 @@
-function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG)
+function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG, opts)
   [n,d] = size(V);
+  V_org = [V, ones(n,1)];
   V_org = V;
 
   tt = 0;
@@ -41,13 +42,13 @@ function [nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_enc
     for j = 1:length(lambda_try)
       if strcmp(Gtype, 'grOWL')
         lambda = lambda_try(j)*(d:-1:1)/d;
-        Uz = Adlas1(V1, C1, lambda);
+        Uz = Adlas1(V1, C1, lambda,opts);
       else
         lambda =  lambda_try(j);
         if DEBUG
           Uz = randn(d,r);
         else
-          Uz = Adlas1(V1, C1, lambda);
+          Uz = Adlas1(V1, C1, lambda,opts);
         end
       end
       UzCell{i,j} = Uz;
