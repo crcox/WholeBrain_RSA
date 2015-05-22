@@ -7,12 +7,12 @@ function [X,info] = Adlas1(A,B,lambda,options)
 %
 % where |x|_[i] denotes the i-th largest entry in x, x_k = ||x_k||_2. The entries in
 % lambda must be nonnegative and in non-increasing order. When lambda is a
-% scalar, the above formulation is reduced to the Lasso:
+% scalar, the above formulation is reduced to the group Lasso:
 %
-%       Minimize 1/2*||Ax-b||_2^2 + lambda * ||x||_1.
+%       Minimize 1/2*||Ax-b||_2^2 + lambda * ||X||_1,2.
 %
 % The options parameter is a structure with the following optional fields
-% with [default value]: 
+% with [default value]:
 %
 %    .iterations    Maximum number of iterations                  [10,000]
 %    .verbosity     0 = nothing, 1 = major, 2 = every                  [1]
@@ -33,24 +33,7 @@ function [X,info] = Adlas1(A,B,lambda,options)
 %    .infeas        Dual infeasibility
 %    .status        Status: 1 = optimal, 2 = iterations
 %
-
-% Copyright 2013, M. Bogdan, E. van den Berg, W. Su, and E.J. Candes
-
-% This file is part of SLOPE Toolbox version 1.0.
-%
-%    The SLOPE Toolbox is free software: you can redistribute it
-%    and/or  modify it under the terms of the GNU General Public License
-%    as published by the Free Software Foundation, either version 3 of
-%    the License, or (at your option) any later version.
-%
-%    The SLOPE Toolbox is distributed in the hope that it will
-%    be useful, but WITHOUT ANY WARRANTY; without even the implied
-%    warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-%    See the GNU General Public License for more details.
-%
-%    You should have received a copy of the GNU General Public License
-%    along with the SLOPE Toolbox. If not, see
-%    <http://www.gnu.org/licenses/>.
+% This file contains parts of code from SLOPE Toolbox version 1.0.
 
 % -------------------------------------------------------------
 % Start timer
@@ -178,18 +161,17 @@ while (true)
       end
 
       % Check primal-dual gap
-      if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
-          (infeas < tolInfeas * lambda(1)) && ...
-          iter > miniterations) % CRC: Added so we could force more iterations.
-         status = STATUS_OPTIMAL;
-      end
+      %if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
+      %    (infeas < tolInfeas * lambda(1)) )
+      %   status = STATUS_OPTIMAL;
+      %end
 
-       %check relative change in objective value
-      %if iter>=2
-      %  if (abs( fPrev - f ) < tolRelGap*max(fPrev,1))
-      %      break;
-      %  end
-      % end
+      % check relative change in objective value
+      if iter > miniterations
+        if (abs( fPrev - f ) < tolRelGap*fPrev)
+            break;
+        end
+       end
 
    else
       str = '';
@@ -232,7 +214,7 @@ while (true)
       Ax = A*X;%A1*vec(X);
       r  = Ax-B;
       f  = trace(r'*r)/2;
-      q  = fPrev + sum(sum(d.*g)) + (L/2)*trace(d'*d);
+      q  = fPrev + trace(d'*g) + (L/2)*trace(d'*d);
 
       Aprods = Aprods + 1;
 
@@ -252,7 +234,7 @@ end
 % Set solution
 X = Y;
 %eps = max(sqrt(sum(X.^2,2)))*0.05;
-%X(sqrt(sum(X.^2,2))<0.001,:) = 0;
+X(sqrt(sum(X.^2,2))<0.001,:) = 0;
 % Information structure
 info = struct();
 if (nargout > 1)

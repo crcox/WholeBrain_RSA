@@ -11,6 +11,7 @@ function WholeBrain_RSA()
   lambda_in = jdat.lambda;
   normalize = jdat.normalize
   AVS = jdat.reptype;
+  SimilarityType = jdat.SimilarityType;
   targets = jdat.targets;
   datafile = jdat.data;
   cvfile = jdat.cvfile;
@@ -112,7 +113,7 @@ function WholeBrain_RSA()
     ind = metadata(subject).TrueArtifacts;
 
   case 'all'
-    ind = metadata(subject).TrueAnimals | metadata(subject).TrueArtifacts;
+    ind = true(size(metadata(subject).TrueAnimals,1),1);
 
   otherwise
     error('Invalid target set: %s.', targets);
@@ -123,6 +124,13 @@ function WholeBrain_RSA()
 
   % load input files and filter outliers more than 5 std dev away
   load(datapath);
+  if isfield(jdat,'ShuffleDataSanityCheck')
+    if jdat.ShuffleDataSanityCheck
+      disp('Shuffling rows of MRI data!!!')
+      %X = X(randperm(size(X,1)),:);
+      X = randn(size(X));
+    end
+  end
   allzero = any(X); % Identify columns with data
   [~, reduxFilter] = removeOutliers(X);
   % Note: reduxFilter field names are reversed...
@@ -158,9 +166,15 @@ function WholeBrain_RSA()
     error('AVS %s: Not implemented.', AVS)
 
   case 'semantic'
-    load(fullfile(datadir,'semantic_model.mat'),'inner'); % inner product of word2vec data
-    sem = inner; clear inner;
+    allSimStructs = load(fullfile(datadir,'semantic_model.mat'));
+    sem = allSimStructs.(jdat.SimilarityType);
     S = sem(ind,ind); clear sem;
+    S = S(~holdout, ~holdout);
+
+  case 'orthographic'
+    allSimStructs = load(fullfile(datadir,'orthography_model.mat'));
+    orth = allSimStructs.(SimilarityType);
+    S = orth(ind,ind); clear orth;
     S = S(~holdout, ~holdout);
 
   otherwise
@@ -171,7 +185,7 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [Uz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, normalize, Gtype, DEBUG, opts);
+  [Uz, Sz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, normalize, Gtype, DEBUG, opts);
 
   fprintf('Saving stuff.....\n');
 
@@ -181,7 +195,7 @@ function WholeBrain_RSA()
     summaryfile = fullfile(root,sprintf('%s_%s_%s.txt',AVS,Gtype));
   end
 
-  save(matfilename,'p1','nz_rows','Uz');
+  save(matfilename,'p1','nz_rows','Sz','Uz');
 
   %fid = fopen(summaryfile,'a+');
   %fprintf(fid,'%s: corr: %f %f test error: %f %f with lambda = %f\n',subject,mean(p1),2*std(p1)/sqrt(tune), mean(test_err),2*std(test_err)/sqrt(tune),lambda_min);
