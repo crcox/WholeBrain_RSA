@@ -144,7 +144,7 @@ function WholeBrain_RSA()
 
   % load input files and filter outliers more than 5 std dev away
   if isfield(jdat,'SanityCheckData')
-    disp('PSYCH! This is a simulation.'
+    disp('PSYCH! This is a simulation.');
     switch jdat.SanityCheckData
     case 'shuffle'
       disp('Shuffling rows of MRI data!!!')
