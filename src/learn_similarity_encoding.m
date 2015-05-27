@@ -1,22 +1,27 @@
-function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, normalize, Gtype, DEBUG, opts)
+function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_similarity_encoding(S, V, lambda_try, cvind, holdout, normalize, Gtype, DEBUG, opts)
   [n,d] = size(V);
-  V_org = [V, ones(n,1)];
-  d = d + 1;
+  V_org = V;
 
-  tt = 0;
-  nt = n - tt;
-  nlam = length(lambda_try);
-  ncv = max(cvind);
+  tt     = 0;
+  nt     = n - tt;
+  nlam   = length(lambda_try);
+  ncv    = max(cvind);
   CVsize = n/ncv;
 
+  if isempty(holdout)
+    cvset = 1:ncv;
+  else
+    cvset = holdout;
+  end
+
   train_err = zeros(nlam,1);
-  test_err = zeros(nlam,1);
-  dist_err = zeros(nlam,1);
-  p1 = zeros(nlam,1);
-  p2 = zeros(nlam,1);
-  nz_rows = zeros(max(cvind),d,nlam);
-  UzAll = cell(max(cvind),nlam);
-  SzAll = cell(max(cvind),nlam);
+  test_err  = zeros(nlam,1);
+  dist_err  = zeros(nlam,1);
+  p1        = zeros(nlam,1);
+  p2        = zeros(nlam,1);
+  nz_rows   = zeros(max(cvind),d,nlam);
+  UzAll     = cell(max(cvind),nlam);
+  SzAll     = cell(max(cvind),nlam);
 
   %% preprocessing
 
@@ -24,7 +29,7 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
   [C, r] = sqrt_truncate_r(S, 0.2);
 
   fprintf('%8s%6s%11s  %11s  %11s  %11s  %11s  %11s  \n', '','lambda','train err','test err', 'p1', 'dist err','p2','n vox')
-  for i = 1:ncv
+  for i = cvset
     V = V_org;
     test_set  = cvind==i;
     train_set = ~test_set;
@@ -57,23 +62,26 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
       UzAll{i,j} = Uz;
       fprintf('%6.2f ', lambda)
 
-      k1  = nnz(any(Uz,2));
+      k1 = nnz(any(Uz,2));
       Wz = Uz*Uz';
       Sz = V*Wz*V';
       Cz = V*Uz;
 
       SzAll{i,j} = Sz;
+%      S_nd = reshape(S(~eye(n)),n,n-1);
+%      Sz_nd = reshape(Sz(~eye(n)),n,n-1);
+
       %store results
       nz_rows(i,:,j) = any(Uz,2);
-      lt = logical(tril(true(nnz(test_set)),-1));
-      s = S(test_set,test_set);
-      sz = Sz(test_set,test_set);
-      s = s(lt);
-      sz = sz(lt);
+%      lt             = logical(tril(true(nnz(test_set)),0));
+%      s              = S(test_set,test_set);
+%      sz             = Sz(test_set,test_set);
+%      s              = s(lt);
+%      sz             = sz(lt);
 
-      %p1(i,j) = trace(corr(S(test_set,:)',Sz(test_set,:)'))/CVsize;
-      p1(i,j) = corr(s,sz);
-      p2(i,j) = trace(corr(C(test_set,:)',Cz(test_set,:)'))/CVsize;
+      p1(i,j)        = trace(corr(S(test_set,:)',Sz(test_set,:)'))/CVsize;
+      %p1(i,j)       = corr(s,sz);
+      p2(i,j)        = trace(corr(C(test_set,:)',Cz(test_set,:)'))/CVsize;
       train_err(i,j) = norm(S1 - V1*Wz*V1','fro')/norm(S1,'fro');
       test_err(i,j)  = norm(Sz(test_set,:)-S(test_set,:),'fro')/norm(S(test_set,:),'fro');
       dist_err(i,j)  = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');

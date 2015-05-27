@@ -161,17 +161,17 @@ while (true)
       end
 
       % Check primal-dual gap
-      %if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
-      %    (infeas < tolInfeas * lambda(1)) )
-      %   status = STATUS_OPTIMAL;
-      %end
+      if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
+          (infeas < tolInfeas * lambda(1)) )
+         status = STATUS_OPTIMAL;
+      end
 
       % check relative change in objective value
-      if iter > miniterations
-        if (abs( fPrev - f ) < tolRelGap*fPrev)
-            break;
-        end
-       end
+      %if iter > miniterations
+      %  if (abs( fPrev - f ) < tolRelGap*fPrev)
+      %      break;
+      %  end
+      %end
 
    else
       str = '';

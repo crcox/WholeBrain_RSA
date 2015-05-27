@@ -5,17 +5,21 @@ function WholeBrain_RSA()
   %@subject = '03' for subject 03
 
   % ----------------------Set parameters-----------------------------------------------
-  jdat = loadjson('params.json')
-  DEBUG = jdat.debug;
-  Gtype = jdat.Gtype;
-  lambda_in = jdat.lambda;
-  normalize = jdat.normalize
-  AVS = jdat.reptype;
+  jdat           = loadjson('params.json')
+  DEBUG          = jdat.debug;
+  Gtype          = jdat.Gtype;
+  lambda_in      = jdat.lambda;
+  normalize      = jdat.normalize
+  BIAS           = jdat.bias
+  AVS            = jdat.reptype;
   SimilarityType = jdat.SimilarityType;
-  targets = jdat.targets;
-  datafile = jdat.data;
-  cvfile = jdat.cvfile;
-  metafile = jdat.metadata;
+  targets        = jdat.targets;
+  datafile       = jdat.data;
+  cvfile         = jdat.cvfile;
+  cvholdout      = jdat.cvholdout;
+  finalholdout   = jdat.finalholdout;
+  metafile       = jdat.metadata;
+
   if isfield(jdat,'AdlasOpts')
     opts = jdat.AdlasOpts;
     % If values originated in a YAML file, and scientific notation is used, the
@@ -60,14 +64,45 @@ function WholeBrain_RSA()
       cvfile = strcat(cvname,ext);
       assert(strcmp(mdir,ddir) && strcmp(cdir,mdir));
     end
+    matfilename = 'results.mat';
 
   case 'chris'
     root = '/home/chris/MCW/WholeBrain_RSA';
     datadir = fullfile(root,'data');
+    resultroot = fullfile(root,'results');
+    if normalize == 1
+      resultdir = fullfile(resultroot,'normalize',Gtype,AVS);
+    else
+      resultdir = fullfile(resultroot,'not_normalize',Gtype,AVS);
+    end
+
+    if DEBUG
+      resultdir = fullfile(resultdir, 'DEBUG')
+    end
+
+    if ~exist(resultdir,'dir')
+      mkdir(resultdir);
+    end
+    matfilename = fullfile(resultdir,sprintf('out_%d.mat',subjid));
 
   case 'urvashi'
     root = '/mnt/ws/home/uoswal/words/';
     datadir = fullfile(root,'data');
+    resultroot = fullfile(root,'results');
+    if normalize == 1
+      resultdir = fullfile(resultroot,'normalize',Gtype,AVS);
+    else
+      resultdir = fullfile(resultroot,'not_normalize',Gtype,AVS);
+    end
+
+    if DEBUG
+      resultdir = fullfile(resultdir, 'DEBUG')
+    end
+
+    if ~exist(resultdir,'dir')
+      mkdir(resultdir);
+    end
+    matfilename = fullfile(resultdir,sprintf('out_%d.mat',subjid));
 
   otherwise
     error('Environment %s not implemented.', jdat.environment);
@@ -79,22 +114,6 @@ function WholeBrain_RSA()
   subjid = sscanf(fname, 's%d');
   subject = find(subjid == [metadata.subject]);
 
-  resultroot = fullfile(root,'results');
-  if normalize == 1
-    resultdir = fullfile(resultroot,'normalize',Gtype,AVS);
-  else
-    resultdir = fullfile(resultroot,'not_normalize',Gtype,AVS);
-  end
-
-  if DEBUG
-    resultdir = fullfile(resultdir, 'DEBUG')
-  end
-
-  if ~exist(resultdir,'dir')
-    mkdir(resultdir);
-  end
-
-  matfilename = fullfile(resultdir,sprintf('out_%d.mat',subjid));
 
   warning off
 
@@ -121,13 +140,17 @@ function WholeBrain_RSA()
   end
   datapath = fullfile(datadir,datafile);
   fprintf('Loading data from  %s... ', datapath);
+  load(datapath);
 
   % load input files and filter outliers more than 5 std dev away
-  load(datapath);
-  if isfield(jdat,'ShuffleDataSanityCheck')
-    if jdat.ShuffleDataSanityCheck
+  if isfield(jdat,'SanityCheckData')
+    disp('PSYCH! This is a simulation.'
+    switch jdat.SanityCheckData
+    case 'shuffle'
       disp('Shuffling rows of MRI data!!!')
-      %X = X(randperm(size(X,1)),:);
+      X = X(randperm(size(X,1)),:);
+    case 'random'
+      disp('Generating totally random MRI data!!!')
       X = randn(size(X));
     end
   end
@@ -138,23 +161,31 @@ function WholeBrain_RSA()
   vox = allzero & reduxFilter.voxels;
   X = X(ind,vox);
 
+  % Include voxel for bias
+  if BIAS
+    X = [X, ones(size(X,1),1)];
+  end
+
   if isfield(jdat, 'cvfile')
     cvpath = fullfile(cvdir,cvfile);
     load(cvpath, 'CV');
     outlying_words = reduxFilter.words(ind);
     cvind = CV(outlying_words, jdat.cvscheme);
-    holdout = cvind == jdat.cvholdout;
-    X(holdout,:) = [];
-    cvind(holdout) = [];
-    cvind(cvind>jdat.cvholdout) = cvind(cvind>jdat.cvholdout) - 1;
+    finalholdout = cvind == jdat.finalholdout;
+    X(finalholdout,:) = [];
+    cvind(finalholdout) = [];
+    cvind(cvind>jdat.finalholdout) = cvind(cvind>jdat.finalholdout) - 1;
+    % Adjust the cv holdout index(es) down if they are higher than the final holdout.
+    if ~isempty(cvholdout)
+      cvholdout(cvholdout>jdat.finalholdout) = cvholdout(cvholdout>jdat.finalholdout) - 1;
+    end
 
   else
-    ncv = jdat.ncv;
+    ncv   = jdat.ncv;
     [n,d] = size(X);
     cvind = mod(1:n, ncv)+1;
     cvind = cvind(randperm(n));
   end
-  fprintf('done.\n');
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
 
@@ -169,40 +200,45 @@ function WholeBrain_RSA()
     allSimStructs = load(fullfile(datadir,'semantic_model.mat'));
     sem = allSimStructs.(jdat.SimilarityType);
     S = sem(ind,ind); clear sem;
-    S = S(~holdout, ~holdout);
+    S = S(~finalholdout, ~finalholdout);
 
   case 'orthographic'
     allSimStructs = load(fullfile(datadir,'orthography_model.mat'));
     orth = allSimStructs.(SimilarityType);
     S = orth(ind,ind); clear orth;
-    S = S(~holdout, ~holdout);
+    S = S(~finalholdout, ~finalholdout);
 
   otherwise
     error('AVS %s not implemented. Should be aud, vis or sem.\n', AVS)
 
   end
 
-  fprintf('Data loaded and processed.');
+  if isfield(jdat,'SanityCheckModel')
+    switch jdat.SanityCheckModel
+    case 'shuffle'
+      disp('Shuffling Similarity Matrix!!!')
+      X = X(randperm(size(X,1)),:);
+    case 'randcorr'
+      disp('Generating totally random Similarity Matrix!!! (correlation)')
+      x = randn(size(S,1),5);
+      S = corr(x');
+    case 'randinner'
+      disp('Generating totally random Similarity Matrix!!! (correlation)')
+      x = randn(size(S,1),5);
+      S = x * x';
+    end
+  end
+
+  fprintf('Data loaded and processed.\n');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [Uz, Sz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, normalize, Gtype, DEBUG, opts);
+  [Uz, Sz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts);
 
   fprintf('Saving stuff.....\n');
 
-  if normalize == 1
-    summaryfile = fullfile(root,sprintf('%s_norm_%s_%s.txt',AVS,Gtype));
-  else
-    summaryfile = fullfile(root,sprintf('%s_%s_%s.txt',AVS,Gtype));
-  end
+  summaryfile = fullfile(root,'summary.txt');
 
   save(matfilename,'p1','nz_rows','Sz','Uz');
-
-  %fid = fopen(summaryfile,'a+');
-  %fprintf(fid,'%s: corr: %f %f test error: %f %f with lambda = %f\n',subject,mean(p1),2*std(p1)/sqrt(tune), mean(test_err),2*std(test_err)/sqrt(tune),lambda_min);
-  %fclose(fid);
-
-  %fprintf('Final estimate of mean correlation and confidence for subject %s: %f %f \n',subject,mean(p11),2*std(p11)/sqrt(tune));
-  %fprintf('Final estimate of mean error in predicted similarity and confidence for subject %s: %f %f \n',subject,mean(test_err),2*std(test_err)/sqrt(tune));
 
   fprintf('Done!\n');
 end
