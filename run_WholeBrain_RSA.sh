@@ -11,18 +11,19 @@ tar xzf r2013b.tar.gz
 rm r2013b.tar.gz
 
 ## Download all large data files listed in URLS from SQUID
+cat URLS URLS_SHARED > ALLURLS
+cat ALLURLS
+while read url; do
+  wget -q "http://proxy.chtc.wisc.edu/SQUID/${url}"
+done < ALLURLS
 mkdir data/
-cd data/
-while read url; do
-  wget -q "http://proxy.chtc.wisc.edu/SQUID/${url}"
-done < ../URLS
-while read url; do
-  wget -q "http://proxy.chtc.wisc.edu/SQUID/${url}"
-done < ../URLS_SHARED
-cd ../
+mv *.mat data/
 
 echo "BEFORE RUNNING"
+echo "home"
 ls -l
+echo "data"
+ls -l data
 
 exe_name=$0
 exe_dir=`dirname "$0"`
