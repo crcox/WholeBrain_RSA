@@ -152,6 +152,18 @@ function WholeBrain_RSA()
     case 'random'
       disp('Generating totally random MRI data!!!')
       X = randn(size(X));
+    case 'useshuffled'
+      [path,fname,ext] = fileparts(datafile);
+      fprintf('Using pre-shuffled MRI data!!! (for %s)\n', fname)
+      rdatapath = fullfile(datadir, sprintf('%s_shuffle.mat',fname));
+      load(rdatapath,'X')
+    case 'userandom'
+      [path,fname,ext] = fileparts(datafile);
+      fprintf('Using predefined random MRI data!!! (for %s)\n', fname)
+      rdatapath = fullfile(datadir, sprintf('%s_random.mat',fname));
+      load(rdatapath,'X')
+    case 'real'
+      disp('Using the true data, unaltered.');
     end
   end
   allzero = any(X); % Identify columns with data
@@ -217,15 +229,46 @@ function WholeBrain_RSA()
     switch jdat.SanityCheckModel
     case 'shuffle'
       disp('Shuffling Similarity Matrix!!!')
-      X = X(randperm(size(X,1)),:);
+      shidx = randperm(size(S,1));
+      S = S(shidx,shidx);
     case 'randcorr'
       disp('Generating totally random Similarity Matrix!!! (correlation)')
       x = randn(size(S,1),5);
       S = corr(x');
     case 'randinner'
-      disp('Generating totally random Similarity Matrix!!! (correlation)')
+      disp('Generating totally random Similarity Matrix!!! (inner product)')
       x = randn(size(S,1),5);
       S = x * x';
+    case 'use_random_cor'
+      disp('Using predefined random similarity matrix!!! (correlation)')
+      [path,fname,ext] = fileparts(datafile);
+      rdatapath = fullfile(datadir, 'random_model.mat');
+      load(rdatapath,'cor');
+      S = cor(ind,ind); clear cor;
+      S = S(~finalholdout, ~finalholdout);
+    case 'use_random_inner'
+      disp('Using predefined random similarity matrix!!! (inner product)')
+      [path,fname,ext] = fileparts(datafile);
+      rdatapath = fullfile(datadir, 'random_model.mat');
+      load(rdatapath,'inner');
+      S = inner(ind,ind); clear inner;
+      S = S(~finalholdout, ~finalholdout);
+    case 'use_shuffled_cor'
+      disp('Using pre-shuffled similarity matrix!!! (correlation)')
+      [path,fname,ext] = fileparts(datafile);
+      rdatapath = fullfile(datadir, 'shuffle_model.mat');
+      load(rdatapath,'cor');
+      S = cor(ind,ind); clear cor;
+      S = S(~finalholdout, ~finalholdout);
+    case 'use_shuffled_inner'
+      disp('Using pre-shuffled similarity matrix!!! (inner product)')
+      [path,fname,ext] = fileparts(datafile);
+      rdatapath = fullfile(datadir, 'shuffle_model.mat');
+      load(rdatapath,'inner');
+      S = inner(ind,ind); clear inner;
+      S = S(~finalholdout, ~finalholdout);
+    case 'real'
+      disp('Using the true similarity matrix, unaltered.')
     end
   end
 
