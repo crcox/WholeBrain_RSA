@@ -53,15 +53,15 @@ function WholeBrain_RSA()
     if isfield(jdat,'datadir')
       datadir = jdat.datadir
     else
-      [ddir,dname,ext] = fileparts(datafile);
-      datadir = fullfile(root,ddir);
-      datafile = strcat(dname,ext);
-      [mdir,mname,ext] = fileparts(metafile);
-      datadir = fullfile(root,mdir);
-      metafile = strcat(mname,ext);
+      [ddir,dname,ext]  = fileparts(datafile);
+      datadir           = fullfile(root,ddir);
+      datafile          = strcat(dname,ext);
+      [mdir,mname,ext]  = fileparts(metafile);
+      datadir           = fullfile(root,mdir);
+      metafile          = strcat(mname,ext);
       [cdir,cvname,ext] = fileparts(cvfile);
-      cvdir = fullfile(root,cdir);
-      cvfile = strcat(cvname,ext);
+      cvdir             = fullfile(root,cdir);
+      cvfile            = strcat(cvname,ext);
       assert(strcmp(mdir,ddir) && strcmp(cdir,mdir));
     end
     matfilename = 'results.mat';
