@@ -145,9 +145,21 @@ function WholeBrain_RSA()
   X = X(filter,vox);
 
   % Include voxel for bias
+  fprintf('%-28s', 'Including Bias Unit:');
+  msg = 'NO';
   if BIAS
+    msg = 'YES';
     X = [X, ones(size(X,1),1)];
   end
+  fprintf('[%3s]\n', msg);
+
+  % Normalize columns of X
+  fprintf('%-28s', 'Normalizing columns of X:');
+  msg = 'NO';
+  if normalize
+    msg = 'YES';
+  end
+  fprintf('[%3s]\n', msg);
 
   if isfield(jdat, 'cvfile')
     cvpath = fullfile(cvdir,cvfile);
@@ -198,10 +210,10 @@ function WholeBrain_RSA()
         S = corr(x');
       case 'cosine'
         fprintf('(cosine)\n');
-        S = pdist(x,'cosine');
+        S = cosinesimilarity(x);
       case 'earthmover'
         fprintf('(cosine---EMD not implemented)\n');
-        S = pdist(x,'cosine');
+        S = cosinesimilarity(x);
       end
 
     case 'use_random'

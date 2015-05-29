@@ -169,7 +169,7 @@ while (true)
       % check relative change in objective value
       %if iter > miniterations
       %  if (abs( fPrev - f ) < tolRelGap*fPrev)
-      %      break;
+      %      status = STATUS_OPTIMAL;
       %  end
       %end
 
@@ -192,12 +192,12 @@ while (true)
       end
    end
 
-   if (status ~= 0)
-      if (verbosity > 0)
-         fprintf(fid,'Exiting with status %d -- %s\n', status, STATUS_MSG{status});
-      end
-      break;
-   end
+  if (status ~= 0)
+    if verbosity > 0
+      fprintf(fid,'Exiting with status %d -- %s\n', status, STATUS_MSG{status});
+    end
+    break;
+  end
 
    % Keep copies of previous values
    AxPrev = Ax;
@@ -234,7 +234,7 @@ end
 % Set solution
 X = Y;
 %eps = max(sqrt(sum(X.^2,2)))*0.05;
-X(sqrt(sum(X.^2,2))<0.001,:) = 0;
+%X(sqrt(sum(X.^2,2))<0.001,:) = 0;
 % Information structure
 info = struct();
 if (nargout > 1)
@@ -245,6 +245,7 @@ if (nargout > 1)
    info.objDual   = objDual;
    info.infeas    = infeas;
    info.status    = status;
+   info.message   = STATUS_MSG{status};
    info.L         = L;
 end
 end % Function Adlas
@@ -265,6 +266,6 @@ function x = proxL1L2(Y,lambda)
 % ------------------------------------------------------------------------
    % Normalization
    y    =  sqrt(sum(Y.^2,2));
-   x    = Y .* ((max(y - lambda,0)./y)*ones(1,size(Y,2)));
+   x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
 end
 

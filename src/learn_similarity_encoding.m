@@ -6,7 +6,6 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
   nt     = n - tt;
   nlam   = length(lambda_try);
   ncv    = max(cvind);
-  CVsize = n/ncv;
 
   if isempty(holdout)
     cvset = 1:ncv;
@@ -30,6 +29,7 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
 
   fprintf('%8s%6s%11s  %11s  %11s  %11s  %11s  %11s  \n', '','lambda','train err','test err', 'p1', 'dist err','p2','n vox')
   for i = cvset
+    CVsize = nnz(cvind==i);
     V = V_org;
     test_set  = cvind==i;
     train_set = ~test_set;
@@ -54,10 +54,10 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
       else
         lambda =  lambda_try(j);
         if DEBUG
-          disp('Uz random for debugging...')
           Uz = randn(d,r);
+          info.message = 'DEBUG'
         else
-          Uz = Adlas1(V1, C1, lambda,opts);
+          [Uz,info] = Adlas1(V1, C1, lambda,opts);
         end
       end
       UzAll{i,j} = Uz;
@@ -89,5 +89,7 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
 
       fprintf('%10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
         train_err(i,j),test_err(i,j),p1(i,j),dist_err(i,j),p2(i,j),k1);
+
+      fprintf('Exit status -- %s\n', info.message);
     end
   end
