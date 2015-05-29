@@ -35,6 +35,7 @@ function [UzAll,SzAll,nz_rows, p1, p2, train_err, test_err, dist_err] = learn_si
     train_set = ~test_set;
     fprintf('cv %3d: ', i)
 
+    % CRC: Normalize only based on the training set.
     if normalize == 1
       mm = zeros(n,d);
       ss = ones(n,1)*std(V,1);
