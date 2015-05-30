@@ -149,7 +149,7 @@ function WholeBrain_RSA()
   fprintf('[%3s]\n', msg);
 
   if isfield(jdat, 'cvfile')
-    cvpath = fullfile(cvdir,cvfile);
+    cvpath = fullfile(datadir,cvfile);
     load(cvpath, 'CV');
     outlying_words = reduxFilter.words(filter);
     cvind = CV(outlying_words, jdat.cvscheme);
