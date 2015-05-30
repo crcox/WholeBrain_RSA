@@ -52,6 +52,11 @@ function WholeBrain_RSA()
     root = './';
     datadir = root;
     matfilename = 'results.mat';
+  case 'chris'
+    root = './';
+    datadir = fullfile(root,'data');
+    matfilename = 'results.mat';
+
 
   otherwise
     error('Environment %s not implemented.', jdat.environment);
@@ -245,6 +250,7 @@ function WholeBrain_RSA()
   else
     simpath = fullfile(datadir,simfile);
     allSimStructs = load(simpath);
+    S = allSimStructs.(simtype);
   end
   S = S(filter,filter); clear allSimStructs;
   S = S(~finalholdout, ~finalholdout);
