@@ -255,6 +255,9 @@ function WholeBrain_RSA()
     case 'real'
       disp('Using the true similarity matrix, unaltered.')
     end
+  else
+    simpath = fullfile(datadir,simfile);
+    allSimStructs = load(simpath);
   end
   S = S(filter,filter); clear allSimStructs;
   S = S(~finalholdout, ~finalholdout);
