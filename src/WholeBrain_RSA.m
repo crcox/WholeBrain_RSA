@@ -50,20 +50,7 @@ function WholeBrain_RSA()
   switch jdat.environment
   case 'condor'
     root = './';
-    if isfield(jdat,'datadir')
-      datadir = jdat.datadir
-    else
-      [ddir,dname,ext]  = fileparts(datafile);
-      datadir           = fullfile(root,ddir);
-      datafile          = strcat(dname,ext);
-      [cdir,cvname,ext] = fileparts(cvfile);
-      cvdir             = fullfile(root,cdir);
-      cvfile            = strcat(cvname,ext);
-      [mdir,mname,ext]  = fileparts(metafile);
-      datadir           = fullfile(root,mdir);
-      metafile          = strcat(mname,ext);
-      assert(strcmp(mdir,ddir) && strcmp(cdir,mdir));
-    end
+    datadir = root;
     matfilename = 'results.mat';
 
   otherwise
