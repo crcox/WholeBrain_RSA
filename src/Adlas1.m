@@ -265,7 +265,13 @@ end
 function x = proxL1L2(Y,lambda)
 % ------------------------------------------------------------------------
    % Normalization
-   y    =  sqrt(sum(Y.^2,2));
-   x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
+      %y    =  sqrt(sum(Y.^2,2));
+	%disp('here')
+    tmp = Y;
+	r = size(Y,2);
+	xtmp = tmp./(repmat(sqrt(sum(tmp.^2,2))+realmin,1,r));
+    x = xtmp.*repmat(max(sqrt(sum(tmp.^2,2))-lambda,0),1,r);
+	%disp(nnz(any(x,2)))    
+   %x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
 end
 

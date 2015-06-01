@@ -57,7 +57,6 @@ function WholeBrain_RSA()
     datadir = fullfile(root,'data');
     matfilename = 'results.mat';
 
-
   otherwise
     error('Environment %s not implemented.', jdat.environment);
 
@@ -246,6 +245,9 @@ function WholeBrain_RSA()
 
     case 'real'
       disp('Using the true similarity matrix, unaltered.')
+      simpath = fullfile(datadir,simfile);
+      allSimStructs = load(simpath);
+      S = allSimStructs.(simtype);
     end
   else
     simpath = fullfile(datadir,simfile);
@@ -258,11 +260,11 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.\n');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [Uz, Sz, nz_rows, p1] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
+  [Uz, Sz, nz_rows, p1,p2,cor1,cor2,err1,err2] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
 
   fprintf('Saving stuff.....\n');
 
-  save(matfilename,'p1','nz_rows','Sz','Uz');
+  save(matfilename,'nz_rows','Sz','Uz','p1','p2','cor1','cor2','err1','err2');
 
   fprintf('Done!\n');
 end
