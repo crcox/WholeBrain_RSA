@@ -18,6 +18,12 @@ function WholeBrain_RSA()
     metafile       = jdat.metadata;
   end
 
+  if isfield(jdat,'tau');
+    tau = jdat.tau;
+  else
+    tau = 0.2;
+  end
+
   % Check that the correct parameters are passed, given the desired algorithm
   switch Gtype
   case 'L1L2'
@@ -37,14 +43,18 @@ function WholeBrain_RSA()
       end
     end
     assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.');
+    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'Group Lasso requires lambda.');
     lambda = jdat.lambda;
     lambda1 = [];
+    LambdaSeq = jdat.LambdaSeq;
 
   case 'grOWL2'
     assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.');
     assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.');
+    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'Group Lasso requires lambda.');
     lambda = jdat.lambda;
     lambda1 = jdat.lambda1;
+    LambdaSeq = jdat.LambdaSeq;
   end
 
   if isfield(jdat,'AdlasOpts')
@@ -111,7 +121,7 @@ function WholeBrain_RSA()
 
   %% --------------------- Object-bank specific code------------------------------------
   datapath = fullfile(datadir,datafile);
-  fprintf('Loading data from  %s... ', datapath);
+  fprintf('Loading data from  %s...\n', datapath);
   load(datapath, 'X');
 
   if isfield(jdat,'filters')
@@ -291,7 +301,40 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.\n');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [results,info] = learn_similarity_encoding(S, X, lambda, lambda1, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
+  switch Gtype
+  case 'L1L2'
+    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+                      'tau'       , tau                , ...
+                      'lambda1'   , lambda1   , ...
+                      'cvind'     , cvind     , ...
+                      'cvholdout' , cvholdout , ...
+                      'normalize' , normalize , ...
+                      'DEBUG'     , DEBUG     , ...
+                      'AdlasOpts' , opts); %#ok<ASGLU>
+
+  case 'grOWL'
+    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+                      'tau'       , tau                , ...
+                      'lambda'    , lambda             , ...
+                      'LambdaSeq' , LambdaSeq          , ...
+                      'cvind'     , cvind              , ...
+                      'cvholdout' , cvholdout          , ...
+                      'normalize' , normalize          , ...
+                      'DEBUG'     , DEBUG              , ...
+                      'AdlasOpts' , opts); %#ok<ASGLU>
+
+  case 'grOWL2'
+    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+                      'tau'       , tau                , ...
+                      'lambda'    , lambda             , ...
+                      'lambda1'   , lambda1            , ...
+                      'LambdaSeq' , LambdaSeq          , ...
+                      'cvind'     , cvind              , ...
+                      'cvholdout' , cvholdout          , ...
+                      'normalize' , normalize          , ...
+                      'DEBUG'     , DEBUG              , ...
+                      'AdlasOpts' , opts); %#ok<ASGLU>
+  end
 
   fprintf('Saving stuff.....\n');
 

@@ -1,4 +1,36 @@
-function [results,info] = learn_similarity_encoding(S, V, lambda, lambda1, cvind, holdout, normalize, Gtype, DEBUG, options)
+function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
+  p = inputParser();
+  addRequired(p,'S');
+  addRequired(p,'V');
+  addRequired(p,'Gtype');
+  addParameter(p , 'tau'       , 0.2);
+  addParameter(p , 'lambda'    , []);
+  addParameter(p , 'lambda1'   , []);
+  addParameter(p , 'cvind'     , []);
+  addParameter(p , 'cvholdout' , []);
+  addParameter(p , 'normalize' , []);
+  addParameter(p , 'LambdaSeq' , []);
+  addParameter(p , 'DEBUG'     , false);
+  addParameter(p , 'AdlasOpts' , struct());
+  parse(p, S, V, Gtype, varargin{:});
+
+  S         = p.Results.S;
+  V         = p.Results.V;
+  Gtype     = p.Results.Gtype;
+  tau       = p.Results.tau;
+  lambda    = p.Results.lambda;
+  lambda1   = p.Results.lambda1;
+  cvind     = p.Results.cvind;
+  holdout   = p.Results.cvholdout;
+  normalize = p.Results.normalize;
+  LambdaSeq = p.Results.LambdaSeq;
+  DEBUG     = p.Results.DEBUG;
+  options   = p.Results.AdlasOpts;
+
+  if strcmp(Gtype, {'grOWL','grOWL'});
+    assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
+  end
+
   [n,d] = size(V);
   Vorig = V;
 
@@ -39,7 +71,7 @@ function [results,info] = learn_similarity_encoding(S, V, lambda, lambda1, cvind
   end
 
   %square root
-  [C, r] = sqrt_truncate_r(S, 0.2);
+  [C, r] = sqrt_truncate_r(S, tau);
 
   fprintf('%8s%6s%11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lambda','test err','train err','p1 test','p1 train','cor test','cor_train','n vox')
   for i = cvset
@@ -136,7 +168,7 @@ function [results,info] = learn_similarity_encoding(S, V, lambda, lambda1, cvind
         st1            = St(train_set,train_set);
         s1             = s1(lt1);
         sz1            = sz1(lt1);
-        st1            = st(lt1);
+        st1            = st1(lt1);
 
         % Comparison to true S matrix
         p1(i,j,k)       = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
