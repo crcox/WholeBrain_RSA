@@ -73,6 +73,11 @@ function [results, params] = LoadResults(varargin)
     resultfile      = fullfile(jobdir, 'results.mat');
     tmp             = load(resultfile);
     tmp.p1          = tmp.p1(cv);
+    tmp.p2          = tmp.p2(cv);
+    tmp.err1        = tmp.err1(cv);
+    tmp.err2        = tmp.err2(cv);
+    tmp.cor1        = tmp.cor1(cv);
+    tmp.cor2        = tmp.cor2(cv);
     tmp.Uz          = tmp.Uz{cv};
     tmp.Sz          = tmp.Sz{cv};
     tmp.nz_rows     = tmp.nz_rows(cv,:);
@@ -86,33 +91,33 @@ function [results, params] = LoadResults(varargin)
   end
   fprintf('\n')
 end
-  function jobdirs = SelectJobDirs(dirs,SORT)
-    N = length(dirs);
-    isJobDir = false(N,1);
-    for ii = 1:N
-      jobdir = dirs(ii).name;
-      % Check if a special dir (current or parent)
-      if any(strcmp(jobdir,{'.','..'}))
-        continue
-      end
-      % Check if contains parameter file.
-      paramfile = fullfile(jobdir, 'params.json');
-      if exist(paramfile, 'file')
-        isJobDir(ii) = true;
-      end
+function jobdirs = SelectJobDirs(dirs,SORT)
+  N = length(dirs);
+  isJobDir = false(N,1);
+  for ii = 1:N
+    jobdir = dirs(ii).name;
+    % Check if a special dir (current or parent)
+    if any(strcmp(jobdir,{'.','..'}))
+      continue
     end
-    jobdirs = dirs(isJobDir);
-
-    if SORT
-      try
-        jobs = cellfun(@(x) sscanf(x,'%d'), {jobdirs.name});
-        disp('Sorting jobs numerically.')
-      catch
-        jobs = {jobdirs.name};
-        disp('Sorting jobs alphabetically.')
-      end
-      [~,ix] = sort(jobs);
-      jobdirs = jobdirs(ix);
+    % Check if contains parameter file.
+    paramfile = fullfile(jobdir, 'params.json');
+    if exist(paramfile, 'file')
+      isJobDir(ii) = true;
     end
-    fprintf('Found %d job directories.\n', length(jobdirs))
   end
+  jobdirs = dirs(isJobDir);
+
+  if SORT
+    try
+      jobs = cellfun(@(x) sscanf(x,'%d'), {jobdirs.name});
+      disp('Sorting jobs numerically.')
+    catch
+      jobs = {jobdirs.name};
+      disp('Sorting jobs alphabetically.')
+    end
+    [~,ix] = sort(jobs);
+    jobdirs = jobdirs(ix);
+  end
+  fprintf('Found %d job directories.\n', length(jobdirs))
+end
