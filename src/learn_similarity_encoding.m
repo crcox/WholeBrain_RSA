@@ -35,18 +35,18 @@ function [results,info] = learn_similarity_encoding(S, V, lambda_try, cvind, hol
   fprintf('%8s%6s%11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lambda','test err','train err', 'p1 test', 'p1 train','cor test','cor_train','n vox')
   for i = cvset
     CVsize = nnz(cvind==i);
-    V = Vorig;
     test_set  = cvind==i;
     train_set = ~test_set;
     fprintf('cv %3d: ', i)
 
+    V = Vorig;
     if normalize == 1
-      mm = ones(n,1)*mean(Vorig(train_set,1);
-      ss = ones(n,1)*std(Vorig(train_set,1);
+      mm = ones(n,1)*mean(V(train_set,1));
+      ss = ones(n,1)*std(V(train_set,1));
       if all(V(:,end)==1)
         ss(:,d) = ones(n,1);
       end
-      V = (Vorig-mm)./ss;
+      V = (V-mm)./ss;
     end
 
     C1 = C(train_set,:);
