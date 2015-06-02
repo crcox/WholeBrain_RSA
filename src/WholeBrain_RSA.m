@@ -18,6 +18,33 @@ function WholeBrain_RSA()
     metafile       = jdat.metadata;
   end
 
+  % Check that the correct parameters are passed, given the desired algorithm
+  switch Gtype
+  case 'L1L2'
+    if isfield(jdat.lambda):
+      if ~isempty(jdat.lambda):
+        warning('Group Lasso does not use the lambda parameter. It is being ignored.');
+      end
+    end
+    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'Group Lasso requires lambda1.\n');
+    lambda1 = jdat.lambda1;
+
+  case 'grOWL'
+    if isfield(jdat.lambda1):
+      if ~isempty(jdat.lambda1):
+        warning('grOWL does not use the lambda1 parameter. It is being ignored.');
+      end
+    end
+    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.\n');
+    lambda = jdat.lambda;
+
+  case 'L1L2'
+    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.\n');
+    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.\n');
+    lambda = jdat.lambda;
+    lambda1 = jdat.lambda1;
+  end
+
   if isfield(jdat,'AdlasOpts')
     opts = jdat.AdlasOpts;
     % If values originated in a YAML file, and scientific notation is used, the
@@ -262,7 +289,7 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.\n');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [results,info] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
+  [results,info] = learn_similarity_encoding(S, X, lambda, lambda1, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
 
   fprintf('Saving stuff.....\n');
 
