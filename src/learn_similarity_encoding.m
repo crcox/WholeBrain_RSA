@@ -50,8 +50,8 @@ function [results,info] = learn_similarity_encoding(S, V, lambda, lambda1, cvind
 
     V = Vorig;
     if normalize == 1
-      mm = ones(n,1)*mean(V(train_set,1));
-      ss = ones(n,1)*std(V(train_set,1));
+      mm = ones(n,1)*mean(V(train_set,:),1);
+      ss = ones(n,1)*std(V(train_set,:),1);
       if all(V(:,end)==1)
         ss(:,d) = ones(n,1);
       end

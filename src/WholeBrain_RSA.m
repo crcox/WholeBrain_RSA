@@ -21,26 +21,28 @@ function WholeBrain_RSA()
   % Check that the correct parameters are passed, given the desired algorithm
   switch Gtype
   case 'L1L2'
-    if isfield(jdat.lambda):
-      if ~isempty(jdat.lambda):
+    if isfield(jdat,'lambda')
+      if ~isempty(jdat.lambda)
         warning('Group Lasso does not use the lambda parameter. It is being ignored.');
       end
     end
-    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'Group Lasso requires lambda1.\n');
+    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'Group Lasso requires lambda1.');
     lambda1 = jdat.lambda1;
+    lambda = [];
 
   case 'grOWL'
-    if isfield(jdat.lambda1):
-      if ~isempty(jdat.lambda1):
+    if isfield(jdat,'lambda1')
+      if ~isempty(jdat.lambda1)
         warning('grOWL does not use the lambda1 parameter. It is being ignored.');
       end
     end
-    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.\n');
+    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.');
     lambda = jdat.lambda;
+    lambda1 = [];
 
-  case 'L1L2'
-    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.\n');
-    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.\n');
+  case 'grOWL2'
+    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.');
+    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.');
     lambda = jdat.lambda;
     lambda1 = jdat.lambda1;
   end
