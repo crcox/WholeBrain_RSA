@@ -8,7 +8,7 @@ IDIRS=
 all: WholeBrain_RSA binaries.tar.gz
 
 sdist:
-	tar czhf source_code.tar.gz src dependencies
+	tar czhf source_code.tar.gz src dependencies ProxSortedL1
 
 extract:
 	-mkdir source_code/

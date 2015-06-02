@@ -274,4 +274,3 @@ function x = proxL1L2(Y,lambda)
 	%disp(nnz(any(x,2)))    
    %x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
 end
-

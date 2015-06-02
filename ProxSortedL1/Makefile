@@ -7,8 +7,8 @@ IDIRS=
 
 all: proxSortedL1Mex.mexa64
 
-proxSortedL1Mex.mexa64: proxSortedL1.c proxSortedL1Mex.c
-	$(MEX) $<
+proxSortedL1Mex.mexa64:
+	$(MEX) proxSortedL1Mex.c proxSortedL1.c
 
 clean:
 	-rm *.dmr

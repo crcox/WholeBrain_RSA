@@ -269,10 +269,11 @@ if (nargout > 1)
    info.runtime   = toc(t0);
    info.Aprods    = Aprods + ceil(iter / gradIter);
    info.ATprods   = ATprods + iter;
-   info.objPrimal = objPrimal;
-   info.objDual   = objDual;
-   info.infeas    = infeas;
+   info.objPrimal = nan(1);
+   info.objDual   = nan(1);
+   info.infeas    = nan(1);
    info.status    = status;
+   info.message   = STATUS_MSG{status};
    info.L         = L;
 end
 end % Function Adlas
@@ -298,12 +299,11 @@ function x = proxL1L2(Y,lambda)
 	r = size(Y,2);
 	xtmp = tmp./(repmat(sqrt(sum(tmp.^2,2))+realmin,1,r));
     x = xtmp.*repmat(max(sqrt(sum(tmp.^2,2))-lambda,0),1,r);
-	%disp(nnz(any(x,2)))    
+	%disp(nnz(any(x,2)))
    %x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
 end
 
 function X = proxGrowl2(Y, lambda)
-    
     %run OWL prox on each column separately
     lambda = lambda(:);
     X = zeros(size(Y));
@@ -312,5 +312,4 @@ function X = proxGrowl2(Y, lambda)
     for ii = 1:r
        X(:,ii) = proxSortedL1(Y(:,ii),lambda);
     end
-    
-end 
+end

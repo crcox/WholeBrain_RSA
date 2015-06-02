@@ -1,4 +1,4 @@
-function [UzAll,SzAll,nz_rows, p1, p2, cor1, cor2, err1, err2 ] = learn_similarity_encoding(S, V, lambda_try, cvind, holdout, normalize, Gtype, DEBUG, opts)
+function [UzAll,SzAll,nz_rows, p1, p2, cor1, cor2, err1, err2 ] = learn_similarity_encoding(S, V, lambda_try, cvind, holdout, normalize, Gtype, DEBUG, options)
   [n,d] = size(V);
   V_org = V;
 
@@ -49,18 +49,26 @@ function [UzAll,SzAll,nz_rows, p1, p2, cor1, cor2, err1, err2 ] = learn_similari
 
     S1 = S(train_set, train_set);
     for j = 1:length(lambda_try)
-      if strcmp(Gtype, 'grOWL')
+
+      switch Gtype
+      case 'grOWL'
         lambda = lambda_try(j)*(d:-1:1)/d;
-        Uz = Adlas1(V1, C1, lambda,opts);
-      else
-        lambda =  lambda_try(j);
-        if DEBUG
-          Uz = randn(d,r);
-          info.message = 'DEBUG'
-        else
-          [Uz,info] = Adlas1(V1, C1, lambda,opts);
-        end
+        [Uz,info] = Adlas1(V1, C1, lambda, options);
+
+      case 'grOWL2'
+        lambda = lambda_try(j)*(d:-1:1)/d;
+        lambda1 = lambda_try(j);
+        [Uz, info] = Adlas2(V1, C1, lambda, lambda1, options);
+
+      case 'L1L2'
+        lambda = lambda_try(j);
+        [Uz,info] = Adlas1(V1, C1, lambda, options);
+
+      case 'DEBUG'
+        Uz = randn(d,r);
+        info.message = 'DEBUG'
       end
+
       UzAll{i,j} = Uz;
       fprintf('%6.2f ', lambda)
 
