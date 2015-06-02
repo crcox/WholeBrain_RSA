@@ -4,7 +4,6 @@ function WholeBrain_RSA()
   jdat         = loadjson('params.json')
   DEBUG        = jdat.debug;
   Gtype        = jdat.Gtype;
-  lambda_in    = jdat.lambda;
   normalize    = jdat.normalize;
   BIAS         = jdat.bias;
   simfile      = jdat.simfile;
