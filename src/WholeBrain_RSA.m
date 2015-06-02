@@ -52,10 +52,12 @@ function WholeBrain_RSA()
     root = './';
     datadir = root;
     matfilename = 'results.mat';
+    infofilename = 'info.mat';
   case 'chris'
     root = './';
     datadir = fullfile(root,'data');
     matfilename = 'results.mat';
+    infofilename = 'info.mat';
 
   otherwise
     error('Environment %s not implemented.', jdat.environment);
@@ -260,11 +262,12 @@ function WholeBrain_RSA()
   fprintf('Data loaded and processed.\n');
 
   %% ---------------------Setting algorithm parameters-------------------------
-  [Uz, Sz, nz_rows, p1,p2,cor1,cor2,err1,err2] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
+  [results,info] = learn_similarity_encoding(S, X, lambda_in, cvind, cvholdout, normalize, Gtype, DEBUG, opts); %#ok<ASGLU>
 
   fprintf('Saving stuff.....\n');
 
-  save(matfilename,'nz_rows','Sz','Uz','p1','p2','cor1','cor2','err1','err2');
+  save(matfilename,'-struct','results');
+  save(infofilename,'-struct','info');
 
   fprintf('Done!\n');
 end
