@@ -43,7 +43,7 @@ function WholeBrain_RSA()
       end
     end
     assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.');
-    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'Group Lasso requires lambda.');
+    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
     lambda = jdat.lambda;
     lambda1 = [];
     LambdaSeq = jdat.LambdaSeq;
@@ -51,7 +51,7 @@ function WholeBrain_RSA()
   case 'grOWL2'
     assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.');
     assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.');
-    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'Group Lasso requires lambda.');
+    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
     lambda = jdat.lambda;
     lambda1 = jdat.lambda1;
     LambdaSeq = jdat.LambdaSeq;

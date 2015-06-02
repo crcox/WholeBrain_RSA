@@ -27,7 +27,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
 
-  if strcmp(Gtype, {'grOWL','grOWL'});
+  if strcmp(Gtype, {'grOWL','grOWL2'});
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
   end
 
@@ -66,7 +66,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   nz_rows = zeros(ncv,d,nlam,nlam1);
   UzAll   = cell(ncv,nlam,nlam1);
   SzAll   = cell(ncv,nlam,nlam1);
-  if nlam > 1 || nlam1 >1
+  if nlam > 1 || nlam1 > 1
     nz_rows = squeeze(mat2cell(nz_rows, ncv, d, ones(1,nlam), ones(1,nlam1)));
   end
 
@@ -154,33 +154,33 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         else
           nz_rows(i,:) = any(Uz,2);
         end
-        lt             = logical(tril(true(nnz(test_set)),0));
-        s              = S(test_set,test_set);
-        sz             = Sz(test_set,test_set);
-        st             = St(test_set,test_set);
-        s              = s(lt);
-        sz             = sz(lt);
-        st             = st(lt);
+        lt  = logical(tril(true(nnz(test_set)),0));
+        s   = S(test_set,test_set);
+        sz  = Sz(test_set,test_set);
+        st  = St(test_set,test_set);
+        s   = s(lt);
+        sz  = sz(lt);
+        st  = st(lt);
 
-        lt1            = logical(tril(true(nnz(train_set)),0));
-        s1             = S(train_set,train_set);
-        sz1            = Sz(train_set,train_set);
-        st1            = St(train_set,train_set);
-        s1             = s1(lt1);
-        sz1            = sz1(lt1);
-        st1            = st1(lt1);
+        lt1 = logical(tril(true(nnz(train_set)),0));
+        s1  = S(train_set,train_set);
+        sz1 = Sz(train_set,train_set);
+        st1 = St(train_set,train_set);
+        s1  = s1(lt1);
+        sz1 = sz1(lt1);
+        st1 = st1(lt1);
 
         % Comparison to true S matrix
-        p1(i,j,k)       = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-        p2(i,j,k)       = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        cor1(i,j,k)     = corr(s,sz); % test
-        cor2(i,j,k)     = corr(s1,sz1); % train
+        p1(i,j,k)    = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+        p2(i,j,k)    = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+        cor1(i,j,k)  = corr(s,sz); % test
+        cor2(i,j,k)  = corr(s1,sz1); % train
         % Comparison to S_trunc = C * C'
-        p1t(i,j,k)       = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-        p2t(i,j,k)       = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        cor1t(i,j,k)     = corr(st,sz); % test
-        cor2t(i,j,k)     = corr(st1,sz1); % train
-        % Comparison C
+        p1t(i,j,k)   = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+        p2t(i,j,k)   = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+        cor1t(i,j,k) = corr(st,sz); % test
+        cor2t(i,j,k) = corr(st1,sz1); % train
+        % Comparison to C
         err1(i,j,k)  = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
         err2(i,j,k)  = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
 
@@ -190,18 +190,18 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
       end % lam1 loop
     end % lam loop
-    results.Uz     = UzAll;
-    results.Sz     = SzAll;
-    results.nz_rows= nz_rows;
-    results.p1     = p1;
-    results.p2     = p2;
-    results.cor1   = cor1;
-    results.cor2   = cor2;
-    results.p1t    = p1t;
-    results.p2t    = p2t;
-    results.cor1t  = cor1t;
-    results.cor2t  = cor2t;
-    results.err1   = err1;
-    results.err2   = err2;
+    results.Uz      = UzAll;
+    results.Sz      = SzAll;
+    results.nz_rows = nz_rows;
+    results.p1      = p1;
+    results.p2      = p2;
+    results.cor1    = cor1;
+    results.cor2    = cor2;
+    results.p1t     = p1t;
+    results.p2t     = p2t;
+    results.cor1t   = cor1t;
+    results.cor2t   = cor2t;
+    results.err1    = err1;
+    results.err2    = err2;
   end % cv loop
 end % learn_similarity_encoding
