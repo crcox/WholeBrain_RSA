@@ -60,7 +60,7 @@ function [X,info] = Adlas2(A,B,lambda, lambda1,options)
   % -------------------------------------------------------------
   if (nargin <  4), options = struct(); end;
 
-  miniter = getDefaultField(options,'miniter',1000);
+  miniterations = getDefaultField(options,'miniterations',1000);
   iterations = getDefaultField(options,'iterations',10000);
   verbosity  = getDefaultField(options,'verbosity',0);
   fid     = getDefaultField(options,'fid',1);
@@ -152,7 +152,7 @@ function [X,info] = Adlas2(A,B,lambda, lambda1,options)
 
     % Check optimality conditions
     if ((mod(iter,optimIter) == 0))
-      if iter>=miniter
+      if iter>=miniterations
         if (abs( fPrev - f ) < tolRelGap*max(fPrev,1))
           status = STATUS_OPTIMAL;
           break;
