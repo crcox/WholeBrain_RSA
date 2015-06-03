@@ -193,8 +193,8 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
       end % lam1 loop
     end % lam loop
     if ~SMALL
-      results.Uz      = UzAll;
-      results.Sz      = SzAll;
+      results.Uz = UzAll;
+      results.Sz = SzAll;
     end
     results.nz_rows = nz_rows;
     results.p1      = p1;

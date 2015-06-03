@@ -1,40 +1,43 @@
 function WholeBrain_RSA(varargin)
-  p = inputParser();
+  p = inputParser;
+  p.KeepUnmatched = true;
   % ----------------------Set parameters-----------------------------------------------
-  addParameter(p , 'DEBUG'            , false     , @islogical );
-  addParameter(p , 'SmallFootprint'   , false     , @islogical );
-  addParameter(p , 'Gtype'            , []        , @ischar    );
-  addParameter(p , 'normalize'        , false     , @islogical );
-  addParameter(p , 'bias'             , false     , @islogical );
-  addParameter(p , 'simfile'          , []        , @ischar    );
-  addParameter(p , 'simtype'          , []        , @ischar    );
-  addParameter(p , 'filters'          , []                     );
-  addParameter(p , 'data'             , []                     );
-  addParameter(p , 'metadata'         , []        , @ischar    );
-  addParameter(p , 'cvfile'           , []        , @ischar    );
-  addParameter(p , 'cvholdout'        , 0         , @isinteger );
-  addParameter(p , 'finalholdout'     , 0         , @isinteger );
-  addParameter(p , 'tau'              , 0.2       , @isnumeric );
-  addParameter(p , 'lambda'           , []        , @isnumeric );
-  addParameter(p , 'lambda1'          , []        , @isnumeric );
-  addParameter(p , 'LambdaSeq'        , []        , @ischar    );
-  addParameter(p , 'AdlasOpts'        , struct()  , @isstruct  );
-  addParameter(p , 'environment'      , 'condor'  , @ischar    );
-  addParameter(p , 'SanityCheckData'  , []        , @ischar    );
-  addParameter(p , 'SanityCheckModel' , []        , @ischar    );
+  addParameter(p , 'DEBUG'            , false     , @islogicallike );
+  addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
+  addParameter(p , 'Gtype'            , []        , @ischar        );
+  addParameter(p , 'normalize'        , false     , @islogicallike );
+  addParameter(p , 'bias'             , false     , @islogicallike );
+  addParameter(p , 'simfile'          , []        , @ischar        );
+  addParameter(p , 'simtype'          , []        , @ischar        );
+  addParameter(p , 'filters'          , []                         );
+  addParameter(p , 'data'             , []                         );
+  addParameter(p , 'metadata'         , []        , @ischar        );
+  addParameter(p , 'cvfile'           , []        , @ischar        );
+  addParameter(p , 'cvscheme'         , []        , @isintegerlike );
+  addParameter(p , 'cvholdout'        , []        , @isintegerlike );
+  addParameter(p , 'finalholdout'     , []        , @isintegerlike );
+  addParameter(p , 'tau'              , 0.2       , @isnumeric     );
+  addParameter(p , 'lambda'           , []        , @isnumeric     );
+  addParameter(p , 'lambda1'          , []        , @isnumeric     );
+  addParameter(p , 'LambdaSeq'        , []        , @ischar        );
+  addParameter(p , 'AdlasOpts'        , struct()  , @isstruct      );
+  addParameter(p , 'environment'      , 'condor'  , @ischar        );
+  addParameter(p , 'SanityCheckData'  , []        , @ischar        );
+  addParameter(p , 'SanityCheckModel' , []        , @ischar        );
 
   if nargin > 0
     parse(p, varargin{:});
   else
-    jdat = load('params.json');
+    jdat = loadjson('params.json');
     fields = fieldnames(jdat);
-    jcell = [fields'; struct2cell(jdat)'];
+    jcell = [fields'; struct2cell(jdat)']
     parse(p, jcell{:});
   end
 
   assertRequiredParameters(p.Results);
 
-  DEBUG            = p.Results.debug;
+  DEBUG            = p.Results.DEBUG;
+  SmallFootprint   = p.Results.SmallFootprint;
   Gtype            = p.Results.Gtype;
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
@@ -43,6 +46,7 @@ function WholeBrain_RSA(varargin)
   filters          = p.Results.filters;
   datafile         = p.Results.data;
   cvfile           = p.Results.cvfile;
+  cvscheme         = p.Results.cvscheme;
   cvholdout        = p.Results.cvholdout;
   finalholdoutInd  = p.Results.finalholdout;
   metafile         = p.Results.metadata;
@@ -55,7 +59,6 @@ function WholeBrain_RSA(varargin)
   SanityCheckData  = p.Results.SanityCheckData;
   SanityCheckModel = p.Results.SanityCheckModel;
 
-  assert(~isempty(cvfile)), 'A path to a mat file containing a logical matrix of\nCV schemes must be provided.');
   % Check that the correct parameters are passed, given the desired algorithm
   [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
 
@@ -291,36 +294,39 @@ function WholeBrain_RSA(varargin)
   switch Gtype
   case 'L1L2'
     [results,info] = learn_similarity_encoding(S, X, Gtype, ...
-                      'tau'       , tau          , ...
-                      'lambda1'   , lambda1      , ...
-                      'cvind'     , cvind        , ...
-                      'cvholdout' , cvholdout , ...
-                      'normalize' , normalize    , ...
-                      'DEBUG'     , DEBUG        , ...
-                      'AdlasOpts' , opts); %#ok<ASGLU>
+                      'tau'            , tau            , ...
+                      'lambda1'        , lambda1        , ...
+                      'cvind'          , cvind          , ...
+                      'cvholdout'      , cvholdout      , ...
+                      'normalize'      , normalize      , ...
+                      'DEBUG'          , DEBUG          , ...
+                      'SmallFootprint' , SmallFootprint , ...
+                      'AdlasOpts'      , opts); %#ok<ASGLU>
 
   case 'grOWL'
     [results,info] = learn_similarity_encoding(S, X, Gtype, ...
-                      'tau'       , tau                , ...
-                      'lambda'    , lambda             , ...
-                      'LambdaSeq' , LambdaSeq          , ...
-                      'cvind'     , cvind              , ...
-                      'cvholdout' , cvholdout       , ...
-                      'normalize' , normalize          , ...
-                      'DEBUG'     , DEBUG              , ...
-                      'AdlasOpts' , opts); %#ok<ASGLU>
+                      'tau'            , tau            , ...
+                      'lambda'         , lambda         , ...
+                      'LambdaSeq'      , LambdaSeq      , ...
+                      'cvind'          , cvind          , ...
+                      'cvholdout'      , cvholdout      , ...
+                      'normalize'      , normalize      , ...
+                      'DEBUG'          , DEBUG          , ...
+                      'SmallFootprint' , SmallFootprint , ...
+                      'AdlasOpts'      , opts); %#ok<ASGLU>
 
   case 'grOWL2'
     [results,info] = learn_similarity_encoding(S, X, Gtype, ...
-                      'tau'       , tau                , ...
-                      'lambda'    , lambda             , ...
-                      'lambda1'   , lambda1            , ...
-                      'LambdaSeq' , LambdaSeq          , ...
-                      'cvind'     , cvind              , ...
-                      'cvholdout' , cvholdout       , ...
-                      'normalize' , normalize          , ...
-                      'DEBUG'     , DEBUG              , ...
-                      'AdlasOpts' , opts); %#ok<ASGLU>
+                      'tau'            , tau            , ...
+                      'lambda'         , lambda         , ...
+                      'lambda1'        , lambda1        , ...
+                      'LambdaSeq'      , LambdaSeq      , ...
+                      'cvind'          , cvind          , ...
+                      'cvholdout'      , cvholdout      , ...
+                      'normalize'      , normalize      , ...
+                      'DEBUG'          , DEBUG          , ...
+                      'SmallFootprint' , SmallFootprint , ...
+                      'AdlasOpts'      , opts); %#ok<ASGLU>
   end
 
   fprintf('Saving stuff.....\n');
@@ -365,12 +371,20 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaS
 end
 
 function assertRequiredParameters(params)
-  required = {'Gtype'    , 'simfile' , 'simtype'   , 'data' , ...
-              'metadata' , 'cvfile'  , 'cvholdout' , 'finalholdout'};
+  required = {'Gtype'    , 'simfile' , 'simtype'   , 'data'     , ...
+              'metadata' , 'cvfile'  , 'cvscheme'  ,'cvholdout' , 'finalholdout'};
   N = length(required);
   for i = 1:N
     req = required{i};
     assert(isfield(params,req), '%s must exist in params structure! Exiting.');
-    assert(~isempty(params,req), '%s must be set. Exiting.');
+    assert(~isempty(params.(req)), '%s must be set. Exiting.');
   end
+end
+
+function b = islogicallike(x)
+  b = any(x == [1,0]);
+end
+
+function b = isintegerlike(x)
+  b = mod(x,1) == 0;
 end
