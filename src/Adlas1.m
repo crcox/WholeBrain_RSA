@@ -206,7 +206,7 @@ function [X,info] = Adlas1(A,B,lambda,options)
     tPrev  = t;
 
     % Lipschitz search
-    while (true)
+    while (L < inf)
       % Compute prox mapping
       X = proxFunction(Y - (1/L)*g, lambda/L);
       d = X - Y;
