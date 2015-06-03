@@ -12,6 +12,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   addParameter(p , 'LambdaSeq' , []);
   addParameter(p , 'DEBUG'     , false);
   addParameter(p , 'AdlasOpts' , struct());
+  addParameter(p , 'SmallFootprint' ,false);
   parse(p, S, V, Gtype, varargin{:});
 
   S         = p.Results.S;
@@ -26,6 +27,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   LambdaSeq = p.Results.LambdaSeq;
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
+  SMALL     = p.Results.SmallFootprint;
 
   if strcmp(Gtype, {'grOWL','grOWL2'});
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
@@ -138,7 +140,6 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         end
 
         UzAll{i,j,k} = Uz;
-        fprintf('%6.2f ', lambda)
 
         k1 = nnz(any(Uz,2));
         Wz = Uz*Uz';
@@ -184,14 +185,17 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         err1(i,j,k)  = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
         err2(i,j,k)  = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
 
+        fprintf('%6.2f ', lambda)
         fprintf('%10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
           err1(i,j),err2(i,j),p1(i,j),p2(i,j),cor1(i,j),cor2(i,j),k1);
 
         fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
       end % lam1 loop
     end % lam loop
-    results.Uz      = UzAll;
-    results.Sz      = SzAll;
+    if ~SMALL
+      results.Uz      = UzAll;
+      results.Sz      = SzAll;
+    end
     results.nz_rows = nz_rows;
     results.p1      = p1;
     results.p2      = p2;
@@ -203,5 +207,6 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     results.cor2t   = cor2t;
     results.err1    = err1;
     results.err2    = err2;
+    results.iter    = info.iter;
   end % cv loop
 end % learn_similarity_encoding

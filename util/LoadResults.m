@@ -8,6 +8,7 @@ function [results, params] = LoadResults(varargin)
   addParameter(p,'MetadataFile','metadata.mat',@ischar)
   addParameter(p,'Filters',{'TrueAnimals'},@iscell)
   addParameter(p,'SortJobs',false,@islogical)
+  addParameter(p,'SkipFields',[])
   parse(p,varargin{:});
 
   resultdir = p.Results.ResultDir;
@@ -18,9 +19,17 @@ function [results, params] = LoadResults(varargin)
   metafile  = p.Results.MetadataFile;
   filters   = p.Results.Filters;
   sortjobs  = p.Results.SortJobs;
+  SKIP      = p.Results.SkipFields;
   allfiles  = dir(resultdir);
   alldirs   = allfiles([allfiles.isdir]);
   jobdirs   = SelectJobDirs(alldirs, sortjobs);
+
+  if ~isempty(SKIP)
+    SkipStr = SKIP;
+    SkipStr{end} = ['and ', SKIP{end}];
+    SkipStr = strjoin(SkipStr, ', ');
+    fprintf('Fields %s will be skipped.\n', SkipStr);
+  end
 
   cvspath = fullfile(datadir,cvsfile);
   load(cvspath, 'CV');
@@ -71,23 +80,31 @@ function [results, params] = LoadResults(varargin)
     end
 
     resultfile      = fullfile(jobdir, 'results.mat');
-    tmp             = load(resultfile);
-    tmp.p1          = tmp.p1(cv);
-    tmp.p2          = tmp.p2(cv);
-    tmp.err1        = tmp.err1(cv);
-    tmp.err2        = tmp.err2(cv);
-    tmp.cor1        = tmp.cor1(cv);
-    tmp.cor2        = tmp.cor2(cv);
-    tmp.Uz          = tmp.Uz{cv};
-    tmp.Sz          = tmp.Sz{cv};
-    tmp.nz_rows     = tmp.nz_rows(cv,:);
-    tmp.S           = S(~finalfilter,~finalfilter);
-    tmp.S_test      = S(cvfilter,cvfilter);
-    tmp.Sz_test     = tmp.Sz(cvfilter(~finalfilter),cvfilter(~finalfilter));
-    tmp.cvind       = cvind;
-    tmp.cvfilter    = cvfilter;
-    tmp.finalfilter = finalfilter;
-    results(i)  = tmp;
+    if exist(resultfile, 'file')
+      tmp             = load(resultfile);
+      tmp.p1          = tmp.p1(cv);
+      tmp.p2          = tmp.p2(cv);
+      tmp.err1        = tmp.err1(cv);
+      tmp.err2        = tmp.err2(cv);
+      tmp.cor1        = tmp.cor1(cv);
+      tmp.cor2        = tmp.cor2(cv);
+      tmp.Uz          = tmp.Uz{cv};
+      tmp.Sz          = tmp.Sz{cv};
+      tmp.nz_rows     = tmp.nz_rows(cv,:);
+      tmp.S           = S(~finalfilter,~finalfilter);
+      tmp.S_test      = S(cvfilter,cvfilter);
+      tmp.Sz_test     = tmp.Sz(cvfilter(~finalfilter),cvfilter(~finalfilter));
+      tmp.cvind       = cvind;
+      tmp.cvfilter    = cvfilter;
+      tmp.finalfilter = finalfilter;
+      if ~isempty(SKIP)
+        nskip = length(SKIP);
+        for ii = 1:nskip
+          tmp = rmfield(tmp, SKIP{ii});
+        end
+      end
+      results(i)  = tmp;
+    end
   end
   fprintf('\n')
 end

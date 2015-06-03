@@ -1,75 +1,75 @@
-function WholeBrain_RSA()
-
+function WholeBrain_RSA(varargin)
+  p = inputParser();
   % ----------------------Set parameters-----------------------------------------------
-  jdat         = loadjson('params.json')
-  DEBUG        = jdat.debug;
-  Gtype        = jdat.Gtype;
-  normalize    = jdat.normalize;
-  BIAS         = jdat.bias;
-  simfile      = jdat.simfile;
-  simtype      = jdat.simtype;
-  filters      = jdat.filters;
-  datafile     = jdat.data;
-  cvfile       = jdat.cvfile;
-  cvholdout    = jdat.cvholdout;
-  finalholdout = jdat.finalholdout;
-  if isfield(jdat,'metadata')
-    metafile       = jdat.metadata;
-  end
+  addParameter(p , 'DEBUG'            , false     , @islogical );
+  addParameter(p , 'SmallFootprint'   , false     , @islogical );
+  addParameter(p , 'Gtype'            , []        , @ischar    );
+  addParameter(p , 'normalize'        , false     , @islogical );
+  addParameter(p , 'bias'             , false     , @islogical );
+  addParameter(p , 'simfile'          , []        , @ischar    );
+  addParameter(p , 'simtype'          , []        , @ischar    );
+  addParameter(p , 'filters'          , []                     );
+  addParameter(p , 'data'             , []                     );
+  addParameter(p , 'metadata'         , []        , @ischar    );
+  addParameter(p , 'cvfile'           , []        , @ischar    );
+  addParameter(p , 'cvholdout'        , 0         , @isinteger );
+  addParameter(p , 'finalholdout'     , 0         , @isinteger );
+  addParameter(p , 'tau'              , 0.2       , @isnumeric );
+  addParameter(p , 'lambda'           , []        , @isnumeric );
+  addParameter(p , 'lambda1'          , []        , @isnumeric );
+  addParameter(p , 'LambdaSeq'        , []        , @ischar    );
+  addParameter(p , 'AdlasOpts'        , struct()  , @isstruct  );
+  addParameter(p , 'environment'      , 'condor'  , @ischar    );
+  addParameter(p , 'SanityCheckData'  , []        , @ischar    );
+  addParameter(p , 'SanityCheckModel' , []        , @ischar    );
 
-  if isfield(jdat,'tau');
-    tau = jdat.tau;
+  if nargin > 0
+    parse(p, varargin{:});
   else
-    tau = 0.2;
+    jdat = load('params.json');
+    fields = fieldnames(jdat);
+    jcell = [fields'; struct2cell(jdat)'];
+    parse(p, jcell{:});
   end
 
+  assertRequiredParameters(p.Results);
+
+  DEBUG            = p.Results.debug;
+  Gtype            = p.Results.Gtype;
+  normalize        = p.Results.normalize;
+  BIAS             = p.Results.bias;
+  simfile          = p.Results.simfile;
+  simtype          = p.Results.simtype;
+  filters          = p.Results.filters;
+  datafile         = p.Results.data;
+  cvfile           = p.Results.cvfile;
+  cvholdout        = p.Results.cvholdout;
+  finalholdoutInd  = p.Results.finalholdout;
+  metafile         = p.Results.metadata;
+  tau              = p.Results.tau;
+  lambda           = p.Results.lambda;
+  lambda1          = p.Results.lambda1;
+  LambdaSeq        = p.Results.LambdaSeq;
+  opts             = p.Results.AdlasOpts;
+  environment      = p.Results.environment;
+  SanityCheckData  = p.Results.SanityCheckData;
+  SanityCheckModel = p.Results.SanityCheckModel;
+
+  assert(~isempty(cvfile)), 'A path to a mat file containing a logical matrix of\nCV schemes must be provided.');
   % Check that the correct parameters are passed, given the desired algorithm
-  switch Gtype
-  case 'L1L2'
-    if isfield(jdat,'lambda')
-      if ~isempty(jdat.lambda)
-        warning('Group Lasso does not use the lambda parameter. It is being ignored.');
-      end
-    end
-    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'Group Lasso requires lambda1.');
-    lambda1 = jdat.lambda1;
-    lambda = [];
+  [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
 
-  case 'grOWL'
-    if isfield(jdat,'lambda1')
-      if ~isempty(jdat.lambda1)
-        warning('grOWL does not use the lambda1 parameter. It is being ignored.');
-      end
+  % If values originated in a YAML file, and scientific notation is used, the
+  % value may have been parsed as a string. Check and correct.
+  if isfield(opts, 'tolInfeas')
+    if ischar(opts.tolInfeas)
+      opts.tolInfeas = sscanf(opts.tolInfeas, '%e');
     end
-    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'Group Lasso requires lambda.');
-    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
-    lambda = jdat.lambda;
-    lambda1 = [];
-    LambdaSeq = jdat.LambdaSeq;
-
-  case 'grOWL2'
-    assert(isfield(jdat, 'lambda1') && ~isempty(jdat.lambda1),'grOWL2 requires lambda1.');
-    assert(isfield(jdat, 'lambda') && ~isempty(jdat.lambda),'grOWL2 Lasso requires lambda.');
-    assert(isfield(jdat, 'LambdaSeq') && ~isempty(jdat.LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
-    lambda = jdat.lambda;
-    lambda1 = jdat.lambda1;
-    LambdaSeq = jdat.LambdaSeq;
   end
-
-  if isfield(jdat,'AdlasOpts')
-    opts = jdat.AdlasOpts;
-    % If values originated in a YAML file, and scientific notation is used, the
-    % value may have been parsed as a string. Check and correct.
-    if isfield(opts, 'tolInfeas')
-        opts.tolInfeas = sscanf(opts.tolInfeas, '%e');
+  if isfield(opts, 'tolRelGap')
+    if ischar(opts.tolRelGap)
+      opts.tolRelGap = sscanf(opts.tolRelGap, '%e');
     end
-    if isfield(opts, 'tolRelGap')
-      if ~isnumeric(opts.tolRelGap)
-        opts.tolRelGap = sscanf(opts.tolRelGap, '%e');
-      end
-    end
-  else
-    opts = struct();
   end
 
   if iscell(datafile)
@@ -77,15 +77,13 @@ function WholeBrain_RSA()
       datafile = datafile{1};
     end
   end
-  if exist('metafile','var')
-    if iscell(metafile)
-      if length(metafile) == 1
-        metafile = metafile{1};
-      end
+  if iscell(metafile)
+    if length(metafile) == 1
+      metafile = metafile{1};
     end
   end
 
-  switch jdat.environment
+  switch environment
   case 'condor'
     root = './';
     datadir = root;
@@ -98,13 +96,11 @@ function WholeBrain_RSA()
     infofilename = 'info.mat';
 
   otherwise
-    error('Environment %s not implemented.', jdat.environment);
+    error('Environment %s not implemented.', environment);
 
   end
 
-  if exist('metafile', 'var')
-    load(fullfile(datadir,metafile), 'metadata');
-  end
+  load(fullfile(datadir,metafile), 'metadata');
   [path,fname,ext] = fileparts(datafile);
   subjid = sscanf(fname, 's%d');
   if ~isempty(subjid)
@@ -123,7 +119,7 @@ function WholeBrain_RSA()
   fprintf('Loading data from  %s...\n', datapath);
   load(datapath, 'X');
 
-  if isfield(jdat,'filters')
+  if ~isempty(filters)
     if iscell(filters)
         n = length(filters);
         key = filters{1};
@@ -145,9 +141,9 @@ function WholeBrain_RSA()
   end
 
   % load input files and filter outliers more than 5 std dev away
-  if isfield(jdat,'SanityCheckData')
+  if ~isempty(SanityCheckData)
     disp('PSYCH! This is a simulation.');
-    switch jdat.SanityCheckData
+    switch SanityCheckData
     case 'shuffle'
       disp('Shuffling rows of MRI data!!!')
       X = X(randperm(size(X,1)),:);
@@ -192,36 +188,28 @@ function WholeBrain_RSA()
   end
   fprintf('[%3s]\n', msg);
 
-  if isfield(jdat, 'cvfile')
-    cvpath = fullfile(datadir,cvfile);
-    load(cvpath, 'CV');
-    outlying_words = reduxFilter.words(filter);
-    cvind = CV(outlying_words, jdat.cvscheme);
-    finalholdout = cvind == jdat.finalholdout;
-    X(finalholdout,:) = [];
-    cvind(finalholdout) = [];
-    cvind(cvind>jdat.finalholdout) = cvind(cvind>jdat.finalholdout) - 1;
-    % Adjust the cv holdout index(es) down if they are higher than the final holdout.
-    if ~isempty(cvholdout)
-      cvholdout(cvholdout>jdat.finalholdout) = cvholdout(cvholdout>jdat.finalholdout) - 1;
-    end
-
-  else
-    ncv   = jdat.ncv;
-    [n,~] = size(X);
-    cvind = mod(1:n, ncv)+1;
-    cvind = cvind(randperm(n));
+  cvpath = fullfile(datadir,cvfile);
+  load(cvpath, 'CV');
+  outlying_words = reduxFilter.words(filter);
+  cvind = CV(outlying_words, cvscheme);
+  finalholdout = cvind == finalholdoutInd;
+  X(finalholdout,:) = [];
+  cvind(finalholdout) = [];
+  cvind(cvind>finalholdoutInd) = cvind(cvind>finalholdoutInd) - 1;
+  % Adjust the cv holdout index(es) down if they are higher than the final holdout.
+  if ~isempty(cvholdout)
+    cvholdout(cvholdout>finalholdoutInd) = cvholdout(cvholdout>finalholdoutInd) - 1;
   end
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
 
-  if isfield(jdat,'SanityCheckModel')
-    switch jdat.SanityCheckModel
+  if ~isempty(SanityCheckModel)
+    switch SanityCheckModel
     case 'shuffle'
       disp('Shuffling Similarity Matrix!!!')
       simpath = fullfile(datadir,simfile);
       allSimStructs = load(simpath);
-      S = allSimStructs.(jdat.simtype);
+      S = allSimStructs.(simtype);
       shidx = randperm(size(S,1));
       S = S(shidx,shidx);
 
@@ -229,7 +217,7 @@ function WholeBrain_RSA()
       fprintf('Generating totally random Similarity Matrix!!! ')
       simpath = fullfile(datadir,simfile);
       allSimStructs = load(simpath);
-      S = allSimStructs.(jdat.simtype);
+      S = allSimStructs.(simtype);
       x = randn(size(S,1),5);
 
       switch simtype
@@ -303,12 +291,12 @@ function WholeBrain_RSA()
   switch Gtype
   case 'L1L2'
     [results,info] = learn_similarity_encoding(S, X, Gtype, ...
-                      'tau'       , tau                , ...
-                      'lambda1'   , lambda1   , ...
-                      'cvind'     , cvind     , ...
+                      'tau'       , tau          , ...
+                      'lambda1'   , lambda1      , ...
+                      'cvind'     , cvind        , ...
                       'cvholdout' , cvholdout , ...
-                      'normalize' , normalize , ...
-                      'DEBUG'     , DEBUG     , ...
+                      'normalize' , normalize    , ...
+                      'DEBUG'     , DEBUG        , ...
                       'AdlasOpts' , opts); %#ok<ASGLU>
 
   case 'grOWL'
@@ -317,7 +305,7 @@ function WholeBrain_RSA()
                       'lambda'    , lambda             , ...
                       'LambdaSeq' , LambdaSeq          , ...
                       'cvind'     , cvind              , ...
-                      'cvholdout' , cvholdout          , ...
+                      'cvholdout' , cvholdout       , ...
                       'normalize' , normalize          , ...
                       'DEBUG'     , DEBUG              , ...
                       'AdlasOpts' , opts); %#ok<ASGLU>
@@ -329,7 +317,7 @@ function WholeBrain_RSA()
                       'lambda1'   , lambda1            , ...
                       'LambdaSeq' , LambdaSeq          , ...
                       'cvind'     , cvind              , ...
-                      'cvholdout' , cvholdout          , ...
+                      'cvholdout' , cvholdout       , ...
                       'normalize' , normalize          , ...
                       'DEBUG'     , DEBUG              , ...
                       'AdlasOpts' , opts); %#ok<ASGLU>
@@ -341,4 +329,48 @@ function WholeBrain_RSA()
   save(infofilename,'-struct','info');
 
   fprintf('Done!\n');
+end
+
+function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
+% Each algorithm requires different lambda configurations. This private
+% function ensures that everything has been properly specified.
+  switch Gtype
+  case 'L1L2'
+    if ~isempty(lambda)
+      warning('Group Lasso does not use the lambda parameter. It is being ignored.');
+    end
+    assert(~isempty(lambda1)   , 'Group Lasso requires lambda1.');
+    lam    = [];
+    lam1   = lambda1;
+    lamSeq = [];
+
+  case 'grOWL'
+    if ~isempty(lambda1)
+      warning('grOWL does not use the lambda1 parameter. It is being ignored.');
+    end
+    assert(~isempty(lambda)    , 'Group Lasso requires lambda.');
+    assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
+    lam    = lambda;
+    lam1   = [];
+    lamSeq = LambdaSeq;
+
+  case 'grOWL2'
+    assert(~isempty(lambda)    , 'grOWL2 Lasso requires lambda.');
+    assert(~isempty(lambda1)   , 'grOWL2 requires lambda1.');
+    assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
+    lam    = lambda;
+    lam1   = lambda1;
+    lamSeq = LambdaSeq;
+  end
+end
+
+function assertRequiredParameters(params)
+  required = {'Gtype'    , 'simfile' , 'simtype'   , 'data' , ...
+              'metadata' , 'cvfile'  , 'cvholdout' , 'finalholdout'};
+  N = length(required);
+  for i = 1:N
+    req = required{i};
+    assert(isfield(params,req), '%s must exist in params structure! Exiting.');
+    assert(~isempty(params,req), '%s must be set. Exiting.');
+  end
 end
