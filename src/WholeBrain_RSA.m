@@ -2,7 +2,7 @@ function WholeBrain_RSA(varargin)
   p = inputParser;
   p.KeepUnmatched = true;
   % ----------------------Set parameters-----------------------------------------------
-  addParameter(p , 'DEBUG'            , false     , @islogicallike );
+  addParameter(p , 'debug'            , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
   addParameter(p , 'Gtype'            , []        , @ischar        );
   addParameter(p , 'normalize'        , false     , @islogicallike );
@@ -34,9 +34,10 @@ function WholeBrain_RSA(varargin)
     parse(p, jcell{:});
   end
 
+  % private function.
   assertRequiredParameters(p.Results);
 
-  DEBUG            = p.Results.DEBUG;
+  DEBUG            = p.Results.debug;
   SmallFootprint   = p.Results.SmallFootprint;
   Gtype            = p.Results.Gtype;
   normalize        = p.Results.normalize;

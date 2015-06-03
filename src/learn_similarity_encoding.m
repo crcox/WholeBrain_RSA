@@ -65,7 +65,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   cor2t   = zeros(ncv,nlam,nlam1);
   p1t     = zeros(ncv,nlam,nlam1);
   p2t     = zeros(ncv,nlam,nlam1);
-  nz_rows = zeros(ncv,d,nlam,nlam1);
+  nz_rows = false(ncv,d,nlam,nlam1);
   UzAll   = cell(ncv,nlam,nlam1);
   SzAll   = cell(ncv,nlam,nlam1);
   if nlam > 1 || nlam1 > 1
@@ -75,7 +75,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
 
-  fprintf('%8s%6s%11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lambda','test err','train err','p1 test','p1 train','cor test','cor_train','n vox')
+  fprintf('%8s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
   for i = cvset
     CVsize = nnz(cvind==i);
     test_set  = cvind==i;
@@ -110,33 +110,35 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           lam1 = lambda1(k);
         end
 
-        switch Gtype
-        case 'L1L2'
-          lam1 = lambda1(j);
-          [Uz,info] = Adlas1(V1, C1, lam1, options);
-
-        case 'grOWL'
-          switch LambdaSeq
-          case 'linear'
-            lam = lam(j)*(d:-1:1)/d;
-          case 'exponential'
-            lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
-          end
-          [Uz,info] = Adlas1(V1, C1, lam, options);
-
-        case 'grOWL2'
-          switch LambdaSeq
-          case 'linear'
-            lam = lam(j)*(d:-1:1)/d;
-          case 'exponential'
-            lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
-          end
-          lam1 = lambda1(k);
-          [Uz, info] = Adlas2(V1, C1, lam, lam1, options);
-
-        case 'DEBUG'
+        if DEBUG
           Uz = randn(d,r);
-          info.message = 'DEBUG'
+          info.message = 'DEBUG';
+          info.iter    = 0;
+        else
+          switch Gtype
+          case 'L1L2'
+            lam1 = lambda1(j);
+            [Uz,info] = Adlas1(V1, C1, lam1, options);
+
+          case 'grOWL'
+            switch LambdaSeq
+            case 'linear'
+              lam = lam(j)*(d:-1:1)/d;
+            case 'exponential'
+              lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
+            end
+            [Uz,info] = Adlas1(V1, C1, lam, options);
+
+          case 'grOWL2'
+            switch LambdaSeq
+            case 'linear'
+              lam = lam(j)*(d:-1:1)/d;
+            case 'exponential'
+              lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
+            end
+            lam1 = lambda1(k);
+            [Uz, info] = Adlas2(V1, C1, lam, lam1, options);
+          end
         end
 
         UzAll{i,j,k} = Uz;
@@ -185,28 +187,42 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         err1(i,j,k)  = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
         err2(i,j,k)  = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
 
-        fprintf('%6.2f ', lambda)
-        fprintf('%10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
-          err1(i,j),err2(i,j),p1(i,j),p2(i,j),cor1(i,j),cor2(i,j),k1);
+        if isempty(lambda)
+          lambda_j = nan;
+        else
+          lambda_j = lambda(j);
+        end
+        if isempty(lambda1)
+          lambda1_k = nan;
+        else
+          lambda1_k = lambda1(k);
+        end
+
+        fprintf('%6.2f | %6.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
+          lambda_j,lambda1_k,err1(i,j,k),err2(i,j,k),p1(i,j,k),p2(i,j,k),cor1(i,j,k),cor2(i,j,k),k1);
 
         fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
       end % lam1 loop
     end % lam loop
-    if ~SMALL
-      results.Uz = UzAll;
-      results.Sz = SzAll;
-    end
-    results.nz_rows = nz_rows;
-    results.p1      = p1;
-    results.p2      = p2;
-    results.cor1    = cor1;
-    results.cor2    = cor2;
-    results.p1t     = p1t;
-    results.p2t     = p2t;
-    results.cor1t   = cor1t;
-    results.cor2t   = cor2t;
-    results.err1    = err1;
-    results.err2    = err2;
-    results.iter    = info.iter;
   end % cv loop
+  if ~SMALL
+    results.Uz = UzAll;
+    results.Sz = SzAll;
+  end
+  if ~iscell(nz_rows);
+    results.nz_rows = nz_rows(cvset,:,:);
+  else
+    results.nz_rows = nz_rows;
+  end
+  results.p1      = p1(cvset,:,:);
+  results.p2      = p2(cvset,:,:);
+  results.cor1    = cor1(cvset,:,:);
+  results.cor2    = cor2(cvset,:,:);
+  results.p1t     = p1t(cvset,:,:);
+  results.p2t     = p2t(cvset,:,:);
+  results.cor1t   = cor1t(cvset,:,:);
+  results.cor2t   = cor2t(cvset,:,:);
+  results.err1    = err1(cvset,:,:);
+  results.err2    = err2(cvset,:,:);
+  results.iter    = info.iter;
 end % learn_similarity_encoding
