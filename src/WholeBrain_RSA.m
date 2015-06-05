@@ -199,10 +199,12 @@ function WholeBrain_RSA(varargin)
   finalholdout = cvind == finalholdoutInd;
   X(finalholdout,:) = [];
   cvind(finalholdout) = [];
-  cvind(cvind>finalholdoutInd) = cvind(cvind>finalholdoutInd) - 1;
-  % Adjust the cv holdout index(es) down if they are higher than the final holdout.
-  if ~isempty(cvholdout)
-    cvholdout(cvholdout>finalholdoutInd) = cvholdout(cvholdout>finalholdoutInd) - 1;
+  if finalholdoutInd > 0
+    cvind(cvind>finalholdoutInd) = cvind(cvind>finalholdoutInd) - 1;
+    % Adjust the cv holdout index(es) down if they are higher than the final holdout.
+    if ~isempty(cvholdout)
+      cvholdout(cvholdout>finalholdoutInd) = cvholdout(cvholdout>finalholdoutInd) - 1;
+    end
   end
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
