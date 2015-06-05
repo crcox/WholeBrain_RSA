@@ -85,7 +85,8 @@ function [X,info] = Adlas1(A,B,lambda,options)
   STATUS_RUNNING    = 0;
   STATUS_OPTIMAL    = 1;
   STATUS_ITERATIONS = 2;
-  STATUS_MSG = {'Optimal','Iteration limit reached'};
+  STATUS_ALLZERO    = 2;
+  STATUS_MSG = {'Optimal','Iteration limit reached','All weights set to zero'};
 
   % Initialize parameters and iterates
   if (isempty(xInit)), xInit = zeros(n,r); end;
@@ -228,6 +229,12 @@ function [X,info] = Adlas1(A,B,lambda,options)
     % Update
     t = (1 + sqrt(1 + 4*t^2)) / 2;
     Y = X + ((tPrev - 1) / t) * (X - xPrev);
+
+    % Check is all weights set to zero
+    if all(Y(:)==0) && iter > 100
+      status = STATUS_ALLZERO;
+      break
+    end
   end
 
   % Set solution
