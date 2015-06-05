@@ -23,7 +23,7 @@ function [C, r] = sqrt_truncate_r(S, tau)
         objfunc = (norm(S-C*C','fro')/norm(S,'fro'));
   %      disp([r,objfunc]);
         if objfunc <= tau
-            fprintf('Truncated at rank: %d\n',r);
+%            fprintf('Truncated at rank: %d\n',r);
             break
         end
     end
