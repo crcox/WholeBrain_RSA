@@ -2,8 +2,8 @@ function R = computeCz(results,params,varargin)
   p = inputParser();
   addRequired(p,'results',@isstruct);
   addRequired(p,'params',@isstruct);
-  addParameter(p,'DataDir','~/MCW/WholeBrain_RSA/data/animals',@ischar)
-  addParameter(p,'MetadataFile','metadata.mat',@ischar)
+  addParameter(p,'DataDir','~/Manchester/WholeBrain_RSA/data/rep',@ischar)
+  addParameter(p,'MetadataFile','metadata_rep.mat',@ischar)
   parse(p,results,params,varargin{:});
 
   RESULTS   = p.Results.results;

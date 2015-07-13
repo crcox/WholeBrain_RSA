@@ -3,7 +3,7 @@ function WriteTable(filename,results,params,varargin)
   addRequired(p, 'filename');
   addRequired(p, 'results');
   addRequired(p, 'params');
-  addParameter(p, 'fields',[])
+  addParameter(p, 'fields',{})
   addParameter(p, 'overwrite', false);
   parse(p, filename, results, params, varargin{:});
 

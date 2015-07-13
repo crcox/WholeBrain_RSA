@@ -40,19 +40,6 @@ function [results, params] = LoadResults(varargin)
 
   metapath = fullfile(datadir,metafile);
   load(metapath, 'metadata');
-  n = length(filters);
-  for i = 1:n
-      sname = filters{i};
-      z = metadata.(sname);
-      if i == 1;
-          filter = z;
-      else
-          filter = filter & z;
-      end
-  end
-
-  % Select appropriate items from SS
-  S = SS(filter,filter);
 
   n = length(jobdirs);
   nchar = 0;
@@ -67,30 +54,49 @@ function [results, params] = LoadResults(varargin)
     tmp.jobdir  = jobdir;
     params(i)   = tmp;
 
+    sind = sscanf(params(i).data,'s%d');
+    sidx = find([metadata.subject]==sind);
+    m = length(filters);
+    for ii = 1:m
+        fname = filters{ii};
+        z = metadata(sidx).(fname);
+        if ii == 1;
+            filter = z;
+        else
+            filter = filter & z;
+        end
+    end
+    % Select appropriate items from SS
+    S = SS(filter,filter);
+
     cvind       = params(i).cvholdout;
     finalind    = params(i).finalholdout;
     cvscheme    = params(i).cvscheme;
     cvfilter    = cvind == CV(filter,cvscheme); %#ok<NODEF>
     finalfilter = finalind == CV(filter,cvscheme);
 
-    if cvind > finalind
-      cv = cvind - 1;
+    if finalind > 0
+        if cvind > finalind
+          cv = cvind - 1;
+        else
+          cv = cvind;
+        end
     else
-      cv = cvind;
+        cv = cvind;
     end
 
     resultfile      = fullfile(jobdir, 'results.mat');
     if exist(resultfile, 'file')
       tmp             = load(resultfile);
-      tmp.p1          = tmp.p1(cv);
-      tmp.p2          = tmp.p2(cv);
-      tmp.err1        = tmp.err1(cv);
-      tmp.err2        = tmp.err2(cv);
-      tmp.cor1        = tmp.cor1(cv);
-      tmp.cor2        = tmp.cor2(cv);
-      tmp.Uz          = tmp.Uz{cv};
-      tmp.Sz          = tmp.Sz{cv};
-      tmp.nz_rows     = tmp.nz_rows(cv,:);
+      tmp.p1          = selectcv(tmp.p1,cv);
+      tmp.p2          = selectcv(tmp.p2,cv);
+      tmp.err1        = selectcv(tmp.err1,cv);
+      tmp.err2        = selectcv(tmp.err2,cv);
+      tmp.cor1        = selectcv(tmp.cor1,cv);
+      tmp.cor2        = selectcv(tmp.cor2,cv);
+      tmp.Uz          = selectcv(tmp.Uz,cv);
+      tmp.Sz          = selectcv(tmp.Sz,cv);
+      tmp.nz_rows     = selectcv(tmp.nz_rows,cv);
       tmp.S           = S(~finalfilter,~finalfilter);
       tmp.S_test      = S(cvfilter,cvfilter);
       tmp.Sz_test     = tmp.Sz(cvfilter(~finalfilter),cvfilter(~finalfilter));
@@ -107,6 +113,32 @@ function [results, params] = LoadResults(varargin)
     end
   end
   fprintf('\n')
+end
+
+function y = selectcv(x,cv)
+  if numel(x)==1
+    if iscell(x);
+      y = x{1};
+    else
+      y = x;
+    end
+    return
+  end
+
+  dim = size(x);
+  if iscell(x)
+    if length(dim)>1 && all(dim>1)
+      y = x(cv,:);
+    else
+      y = x{cv};
+    end
+  else
+    if length(dim)>1 && all(dim>1)
+      y = x(cv,:);
+    else
+      y = x(cv);
+    end
+  end
 end
 function jobdirs = SelectJobDirs(dirs,SORT)
   N = length(dirs);

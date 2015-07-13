@@ -35,6 +35,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
 
   [n,d] = size(V);
   Vorig = V;
+  BIASUNIT = all(V(:,end)==1);
 
   if isempty(lambda)
     nlam = 1;
@@ -83,13 +84,30 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     fprintf('cv %3d: ', i)
 
     V = Vorig;
-    if normalize == 1
-      mm = ones(n,1)*mean(V(train_set,:),1);
-      ss = ones(n,1)*std(V(train_set,:),1);
-      if all(V(:,end)==1)
-        ss(:,d) = ones(n,1);
-      end
-      V = (V-mm)./ss;
+
+    % remove bias unit for normalization
+    if BIASUNIT
+      V(:,end) = [];
+    end
+
+    % normalize
+    switch normalize
+    case 'zscore_train'
+      mm = mean(V(train_set,:),1);
+      ss = std(V(train_set,:),0,1);
+    case 'zscore'
+      mm = mean(V,1);
+      ss = std(V,0,1);
+    case '2norm'
+      mm = mean(V,1);
+      ss = norm(V);
+    end
+    V = bsxfun(@minus,V, mm);
+    V = bsxfun(@rdivide,V, ss);
+
+    % Reinsert bias term
+    if BIASUNIT
+      V(:,end+1) = 1;
     end
 
     C1 = C(train_set,:);

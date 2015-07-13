@@ -5,7 +5,7 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'debug'            , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
   addParameter(p , 'Gtype'            , []        , @ischar        );
-  addParameter(p , 'normalize'        , false     , @islogicallike );
+  addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
   addParameter(p , 'simfile'          , []        , @ischar        );
   addParameter(p , 'simtype'          , []        , @ischar        );
@@ -110,6 +110,7 @@ function WholeBrain_RSA(varargin)
   if ~isempty(subjid)
     subject = find(subjid == [metadata.subject]);
   end
+  metadata = metadata(subject);
 
   warning off
 
