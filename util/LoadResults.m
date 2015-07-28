@@ -100,7 +100,7 @@ function [results, params] = LoadResults(varargin)
       tmp.cor2        = selectcv(tmp.cor2,cv);
       tmp.Uz          = selectcv(tmp.Uz,cv);
       tmp.Sz          = selectcv(tmp.Sz,cv);
-      tmp.nz_rows     = selectcv(tmp.nz_rows,cv);
+      tmp.nz_rows     = any(tmp.Uz,2);
       tmp.S           = S(~finalfilter,~finalfilter);
       tmp.S_test      = S(cvfilter,cvfilter);
       tmp.Sz_test     = tmp.Sz(cvfilter(~finalfilter),cvfilter(~finalfilter));
@@ -119,6 +119,7 @@ function [results, params] = LoadResults(varargin)
   fprintf('\n')
 end
 
+%% Private Functions
 function y = selectcv(x,cv)
   if numel(x)==1
     if iscell(x);
@@ -145,7 +146,6 @@ function y = selectcv(x,cv)
   end
 end
 
-%% Private Functions
 function jobdirs = SelectJobDirs(dirs,varargin)
   p = inputParser;
   addRequired(p, 'dirs');
