@@ -7,6 +7,8 @@ function [results, params] = LoadResults(varargin)
   addParameter(p,'CVSchemesFile','CV_schemes.mat',@ischar)
   addParameter(p,'MetadataFile','metadata.mat',@ischar)
   addParameter(p,'Filters',{'TrueAnimals'},@iscell)
+  addParameter(p,'ResultFile','',@ischar);
+  addParameter(p,'ParamFile','',@ischar);
   addParameter(p,'SortJobs',false,@islogical)
   addParameter(p,'SkipFields',[])
   parse(p,varargin{:});
@@ -19,10 +21,12 @@ function [results, params] = LoadResults(varargin)
   metafile  = p.Results.MetadataFile;
   filters   = p.Results.Filters;
   sortjobs  = p.Results.SortJobs;
+  resultfile = p.Results.ResultFile;
+  paramfile = p.Results.ParamFile;
   SKIP      = p.Results.SkipFields;
   allfiles  = dir(resultdir);
   alldirs   = allfiles([allfiles.isdir]);
-  jobdirs   = SelectJobDirs(alldirs, sortjobs);
+  jobdirs   = SelectJobDirs(alldirs, 'root',resultdir, 'sort', sortjobs);
 
   if ~isempty(SKIP)
     SkipStr = SKIP;
@@ -48,9 +52,9 @@ function [results, params] = LoadResults(varargin)
     fprintf(repmat('\b', 1, nchar));
     nchar = fprintf('%d of %d', i, n);
 
-    jobdir      = jobdirs(i).name;
-    paramfile   = fullfile(jobdir,'params.json');
-    tmp         = loadjson(paramfile);
+    jobdir      = fullfile(resultdir, jobdirs(i).name);
+    parampath   = fullfile(jobdir,paramfile);
+    tmp         = loadjson(parampath);
     tmp.jobdir  = jobdir;
     params(i)   = tmp;
 
@@ -72,7 +76,7 @@ function [results, params] = LoadResults(varargin)
     cvind       = params(i).cvholdout;
     finalind    = params(i).finalholdout;
     cvscheme    = params(i).cvscheme;
-    cvfilter    = cvind == CV(filter,cvscheme); %#ok<NODEF>
+    cvfilter    = cvind == CV(filter,cvscheme);
     finalfilter = finalind == CV(filter,cvscheme);
 
     if finalind > 0
@@ -85,9 +89,9 @@ function [results, params] = LoadResults(varargin)
         cv = cvind;
     end
 
-    resultfile      = fullfile(jobdir, 'results.mat');
-    if exist(resultfile, 'file')
-      tmp             = load(resultfile);
+    resultpath = fullfile(jobdir, resultfile);
+    if exist(resultpath, 'file')
+      tmp             = load(resultpath);
       tmp.p1          = selectcv(tmp.p1,cv);
       tmp.p2          = selectcv(tmp.p2,cv);
       tmp.err1        = selectcv(tmp.err1,cv);
@@ -140,11 +144,23 @@ function y = selectcv(x,cv)
     end
   end
 end
-function jobdirs = SelectJobDirs(dirs,SORT)
+
+%% Private Functions
+function jobdirs = SelectJobDirs(dirs,varargin)
+  p = inputParser;
+  addRequired(p, 'dirs');
+  addParameter(p, 'root','.', @ischar);
+  addParameter(p, 'sort',false, @islogical);
+  parse(p, dirs, varargin{:});
+  
+  dirs = p.Results.dirs;
+  SORT = p.Results.sort;
+  root = p.Results.root;
+  
   N = length(dirs);
   isJobDir = false(N,1);
   for ii = 1:N
-    jobdir = dirs(ii).name;
+    jobdir = fullfile(root,dirs(ii).name);
     % Check if a special dir (current or parent)
     if any(strcmp(jobdir,{'.','..'}))
       continue
