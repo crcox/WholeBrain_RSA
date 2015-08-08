@@ -98,9 +98,15 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     case 'zscore'
       mm = mean(V,1);
       ss = std(V,0,1);
+    case 'stdev'
+      mm = 0;
+      ss = std(V,0,1);
     case '2norm'
       mm = mean(V,1);
       ss = norm(V);
+    otherwise
+      mm = 0;
+      ss = 1;
     end
     V = bsxfun(@minus,V, mm);
     V = bsxfun(@rdivide,V, ss);
