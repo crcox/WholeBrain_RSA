@@ -1,0 +1,49 @@
+{
+    "AdlasOpts": {
+        "fid": 1, 
+        "gradIter": 20, 
+        "iterations": 100000, 
+        "miniterations": 5000, 
+        "optimIter": 1, 
+        "tolInfeas": "1e-9", 
+        "tolRelGap": "1e-9", 
+        "verbosity": 0, 
+        "xInit": []
+    }, 
+    "COPY": [
+        "metadata", 
+        "cvfile", 
+        "simfile", 
+        "executable", 
+        "wrapper", 
+        "ProxSortedL1"
+    ], 
+    "Gtype": "L1L2", 
+    "LambdaSeq": "linear", 
+    "ProxSortedL1": [
+        "cproxSortedL1.c", 
+        "proxSortedL1.c", 
+        "proxSortedL1.h", 
+        "proxSortedL1Mex.c"
+    ], 
+    "URLS": [
+        "data"
+    ], 
+    "bias": true, 
+    "cvfile": "CV_schemes_avg.mat", 
+    "cvholdout": 5, 
+    "cvscheme": 1, 
+    "data": "s12_avg.mat", 
+    "debug": false, 
+    "environment": "condor", 
+    "executable": "WholeBrain_RSA", 
+    "filters": "visual", 
+    "finalholdout": 1, 
+    "lambda1": 16, 
+    "metadata": "metadata_avg.mat", 
+    "normalize": "stdev", 
+    "simfile": "model_visual_avg.mat", 
+    "simtype": "earthmover", 
+    "tau": 0.20000000000000001, 
+    "wrapper": "run_WholeBrain_RSA.sh"
+}
