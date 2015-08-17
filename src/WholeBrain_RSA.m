@@ -1,6 +1,6 @@
 function WholeBrain_RSA(varargin)
   p = inputParser;
-  p.KeepUnmatched = true;
+  p.KeepUnmatched = false;
   % ----------------------Set parameters-----------------------------------------------
   addParameter(p , 'debug'            , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
@@ -105,11 +105,16 @@ function WholeBrain_RSA(varargin)
   end
 
   load(fullfile(datadir,metafile), 'metadata');
+  disp(metadata);
+  disp(datafile);
   [path,fname,ext] = fileparts(datafile);
+  disp(fname);
   subjid = sscanf(fname, 's%d');
   if ~isempty(subjid)
     subject = find(subjid == [metadata.subject]);
   end
+  disp(subjid)
+  disp(subject)
   metadata = metadata(subject);
 
   warning off
