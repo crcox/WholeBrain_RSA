@@ -24,13 +24,19 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'environment'      , 'condor'  , @ischar        );
   addParameter(p , 'SanityCheckData'  , []        , @ischar        );
   addParameter(p , 'SanityCheckModel' , []        , @ischar        );
+  % Parameters below this line are unused in the analysis, may exist in the
+  % parameter file because other progams use them.
+  addParameter(p , 'COPY'             , []                         );
+  addParameter(p , 'URLS'             , []                         );
+  addParameter(p , 'executable'       , []                         );
+  addParameter(p , 'wrapper'          , []                         );
 
   if nargin > 0
     parse(p, varargin{:});
   else
     jdat = loadjson('params.json');
     fields = fieldnames(jdat);
-    jcell = [fields'; struct2cell(jdat)']
+    jcell = [fields'; struct2cell(jdat)'];
     parse(p, jcell{:});
   end
 
@@ -61,7 +67,7 @@ function WholeBrain_RSA(varargin)
   SanityCheckModel = p.Results.SanityCheckModel;
 
   % Check that the correct parameters are passed, given the desired algorithm
-  [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
+  [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
 
   % If values originated in a YAML file, and scientific notation is used, the
   % value may have been parsed as a string. Check and correct.
@@ -104,20 +110,16 @@ function WholeBrain_RSA(varargin)
 
   end
 
-  load(fullfile(datadir,metafile), 'metadata');
-  disp(metadata);
-  disp(datafile);
-  [path,fname,ext] = fileparts(datafile);
-  disp(fname);
+  StagingContainer = load(fullfile(datadir,metafile), 'metadata');
+  metadata = StagingContainer.metadata;
+  [~,fname,~] = fileparts(datafile);
   subjid = sscanf(fname, 's%d');
   if ~isempty(subjid)
     subject = find(subjid == [metadata.subject]);
   end
-  disp(subjid)
-  disp(subject)
   metadata = metadata(subject);
 
-  warning off
+%  warning off
 
   %Testing similarity based feature selection method
   % to fix/edit:
@@ -126,8 +128,10 @@ function WholeBrain_RSA(varargin)
 
   %% --------------------- Object-bank specific code------------------------------------
   datapath = fullfile(datadir,datafile);
-  fprintf('Loading data from  %s...\n', datapath);
-  load(datapath, 'X');
+  fprintf('Loading data from  %s, subject number %d\n', datapath, subject);
+  StagingContainer = load(datapath, 'X');
+  X = StagingContainer.X;
+  fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
   if ~isempty(filters)
     if iscell(filters)
@@ -149,7 +153,7 @@ function WholeBrain_RSA(varargin)
   else
     filter = true(size(X,1),1);
   end
-
+  
   % load input files and filter outliers more than 5 std dev away
   if ~isempty(SanityCheckData)
     disp('PSYCH! This is a simulation.');
@@ -161,12 +165,12 @@ function WholeBrain_RSA(varargin)
       disp('Generating totally random MRI data!!!')
       X = randn(size(X));
     case 'use_shuffled'
-      [path,fname,ext] = fileparts(datafile);
+      [~,fname,~] = fileparts(datafile);
       fprintf('Using pre-shuffled MRI data!!! (for %s)\n', fname)
       rdatapath = fullfile(datadir, sprintf('%s_shuffle.mat',fname));
       load(rdatapath,'X')
     case 'use_random'
-      [path,fname,ext] = fileparts(datafile);
+      [~,fname,~] = fileparts(datafile);
       fprintf('Using predefined random MRI data!!! (for %s)\n', fname)
       rdatapath = fullfile(datadir, sprintf('%s_random.mat',fname));
       load(rdatapath,'X')
@@ -180,7 +184,8 @@ function WholeBrain_RSA(varargin)
   filter = filter & reduxFilter.words';
   vox = allzero & reduxFilter.voxels;
   X = X(filter,vox);
-
+  fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
+  
   % Include voxel for bias
   fprintf('%-28s', 'Including Bias Unit:');
   msg = 'NO';
@@ -346,7 +351,7 @@ function WholeBrain_RSA(varargin)
   fprintf('Done!\n');
 end
 
-function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
+function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq)
 % Each algorithm requires different lambda configurations. This private
 % function ensures that everything has been properly specified.
   switch Gtype
