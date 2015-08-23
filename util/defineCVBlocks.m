@@ -1,7 +1,7 @@
 function cvb = defineCVBlocks(stimcode, varargin)
 %DEFINECVBLOCKS  Define k-fold or LOO cross validation assignments
 %
-% defineCVBlocks(stimcode, 'LLO')
+% defineCVBlocks(stimcode, 'LOO')
 % defineCVBlocks(stimcode, 'folds', k)
 % defineCVBlocks(stimcode, 'folds', k, 'schemes', n)
 %
@@ -31,15 +31,15 @@ function cvb = defineCVBlocks(stimcode, varargin)
 %   defineCVBlocks(stimcodeCellStr,'folds',4,'schemes',4)
 %   % Protection against asking for too many unique schemes...
 %   defineCVBlocks(stimcodeCellStr,'folds',4,'schemes',10000)
-%   % LLO is useful in these more complex cases
-%   defineCVBlocks(stimcodeCellStr,'LLO', true)
+%   % LOO is useful in these more complex cases
+%   defineCVBlocks(stimcodeCellStr,'LOO', true)
 % See also:
 % BAR
 % SOMECLASS/SOMEMETHOD
 
 p = inputParser();
 addRequired(p, 'stimcode', @isvector);
-addParameter(p, 'LLO', false, @islogical);
+addParameter(p, 'LOO', false, @islogical);
 addParameter(p, 'folds', 0, @isintegervalue);
 addParameter(p, 'schemes', 1, @isintegervalue);
 addParameter(p, 'stoploss', 10, @isintegervalue);
@@ -76,18 +76,18 @@ for i = 1:numel(stimset)
 end
 
 % Check that one and only one method is specified.
-if p.Results.LLO && (p.Results.folds > 1)
+if p.Results.LOO && (p.Results.folds > 1)
   err.message = sprintf('Cannot specify both LeaveOneOut and kFold.');
   err.identifier = 'WholeBrain_RSA:defineCVBlocks:incompatibleArguments';
   error(err);
-elseif ~(p.Results.LLO || (p.Results.folds > 1))
+elseif ~(p.Results.LOO || (p.Results.folds > 1))
   err.message = sprintf('No method specified.');
   err.identifier = 'WholeBrain_RSA:defineCVBlocks:tooFewArguments';
   error(err);
 end
 
 % Check method specifications, and catch invalid cases.
-if p.Results.LLO;
+if p.Results.LOO;
   method = 'LeaveOneOut';
 elseif p.Results.folds > 1
   method = 'kFold';
@@ -125,8 +125,8 @@ switch method
     % number of trials is not evenly divisible by the number of folds.
     % Assigning stimuli to folds at random.
     cvb = zeros(schemes, p); % start with this orientation to appease unique(...,'rows');
-    m = idivide(p, n);
-    r = mod(p, n);
+    m = idivide(p, folds);
+    r = mod(p, folds);
     foldsize = ones(1, folds, 'uint32') * m;
     foldsize(1:r) = m + 1;
     scheme = 1;
@@ -157,7 +157,7 @@ switch method
     % Transpose to expected orientation.
     cvb = cvb(1:scheme-1,:)';
     if BAILOUT
-      warning('Unable to generate %d unique schemes based on input. Returning %d schemes.', schemes, scheme);
+      warning('Unable to generate %d unique schemes based on input. Returning %d schemes.', schemes, scheme-1);
     end
 end
 end
