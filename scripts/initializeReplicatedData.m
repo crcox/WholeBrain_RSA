@@ -107,3 +107,4 @@ save(metapath_out, 'metadata');
 %% Pre-generate CV schemes
 CV = defineCVBlocks(conceptcode, 'folds', 9, 'schemes', 11);
 CV(:,12) = defineCVBlocks(conceptcode, 'LOO', true);
+save(fullfile(datadir_out, 'CV_schemes_rep.mat'), 'CV');

@@ -22,6 +22,7 @@ function [Aredux, reduxFilter]=removeOutliers(A)
         outCount = sum(outVector);
     end
     reduxFilter.voxels(outliers) = false;
+    reduxFilter.voxels = reduxFilter.voxels & any(A,1);
 
     % For rows...
     outVector = abs(zscore(mean(Aredux,2))) > 5;
@@ -37,4 +38,5 @@ function [Aredux, reduxFilter]=removeOutliers(A)
         outCount = sum(outVector);
     end
     reduxFilter.words(outliers) = false;
+    reduxFilter.words = reduxFilter.words & any(A,2)';
 end

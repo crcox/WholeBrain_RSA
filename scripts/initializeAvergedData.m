@@ -2,11 +2,13 @@
 % Note that in this scheme, the data are replicated to match the similarity
 % structures.
 
-pathtorepo = '~/src/WholeBrain_RSA/'; % lab machine
-%pathtorepo = 'C:/Users/chris/Documents/WholeBrain_RSA/'; % home machine
+% pathtorepo = '~/src/WholeBrain_RSA/'; % lab machine
+pathtorepo = 'C:/Users/chris/Documents/WholeBrain_RSA/'; % home machine
 addpath(fullfile(pathtorepo,'src'),fullfile(pathtorepo,'util'))
-datadir_in = '~/data/Manchester/data/mat/fromRick';
-datadir_out = '~/data/Manchester/WholeBrain_RSA/data/avg';
+% datadir_in = '~/data/Manchester/data/mat/fromRick';
+% datadir_out = '~/data/Manchester/WholeBrain_RSA/data/avg';
+datadir_in = './UrvashiData';
+datadir_out = './DataTest';
 
 %% Define metadata
 % number of subjects
@@ -61,7 +63,7 @@ for i = 1:n;
   strlen = fprintf(fmt, i, loaded, outliers_identified, filtered, saved);
   clear StagingContainer;
   
-  % Filter
+  % Filter and Aggregate
   try
     Averaged.visual = averageRepeatedTrials(Data.raw(visual,:), stimcode(visual));
     Averaged.audio = averageRepeatedTrials(Data.raw(audio,:), stimcode(audio));
@@ -119,31 +121,37 @@ for i = 1:n
   %
   metadata(i).filter(1).subset = 'visual';
   metadata(i).filter(1).label = 'rowfilter';
+  metadata(i).filter(1).dimension = 1;
   metadata(i).filter(1).filter = filters(i).visual.words;
   metadata(i).filter(1).notes = 'Subset by modality, average over stimulus repetitions.';
   %
   metadata(i).filter(2).subset = 'visual';
   metadata(i).filter(2).label = 'colfilter';
+  metadata(i).filter(2).dimension = 2;
   metadata(i).filter(2).filter = filters(i).visual.voxels;
   metadata(i).filter(2).notes = 'Subset by modality, average over stimulus repetitions.';
   %
   metadata(i).filter(3).subset = 'audio';
   metadata(i).filter(3).label = 'rowfilter';
+  metadata(i).filter(3).dimension = 1;
   metadata(i).filter(3).filter = filters(i).audio.words;
   metadata(i).filter(3).notes = 'Subset by modality, average over stimulus repetitions.';
   %
   metadata(i).filter(4).subset = 'audio';
   metadata(i).filter(4).label = 'colfilter';
+  metadata(i).filter(4).dimension = 2;
   metadata(i).filter(4).filter = filters(i).audio.voxels;
   metadata(i).filter(4).notes = 'Subset by modality, average over stimulus repetitions.';
   %
   metadata(i).filter(5).subset = 'semantic';
   metadata(i).filter(5).label = 'rowfilter';
+  metadata(i).filter(5).dimension = 1;
   metadata(i).filter(5).filter = filters(i).semantic.words;
   metadata(i).filter(5).notes = 'Average over stimulus repetitions and modalities.';
   %
   metadata(i).filter(6).subset = 'semantic';
   metadata(i).filter(6).label = 'colfilter';
+  metadata(i).filter(6).dimension = 2;
   metadata(i).filter(6).filter = filters(i).semantic.voxels;
   metadata(i).filter(6).notes = 'Average over stimulus repetitions and modalities.';
 
@@ -161,3 +169,4 @@ save(metapath_out, 'metadata');
 % There are 37 unique concepts.
 CV = defineCVBlocks(1:37, 'folds', 9, 'schemes', 11);
 CV(:,12) = defineCVBlocks(1:37, 'LOO', true);
+save(fullfile(datadir_out, 'CV_schemes_avg.mat'), 'CV');

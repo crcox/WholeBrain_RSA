@@ -8,11 +8,14 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
   addParameter(p , 'simfile'          , []        , @ischar        );
-  addParameter(p , 'simtype'          , []        , @ischar        );
+  addParameter(p , 'sim_varname'      , []        , @ischar        );
   addParameter(p , 'filters'          , []                         );
   addParameter(p , 'data'             , []                         );
   addParameter(p , 'metadata'         , []        , @ischar        );
+  addParameter(p , 'data_varname'     , []                         );
+  addParameter(p , 'metadata_varname' , []        , @ischar        );
   addParameter(p , 'cvfile'           , []        , @ischar        );
+  addParameter(p , 'cv_varname'       , []        , @ischar        );
   addParameter(p , 'cvscheme'         , []        , @isintegerlike );
   addParameter(p , 'cvholdout'        , []        , @isintegerlike );
   addParameter(p , 'finalholdout'     , 0         , @isintegerlike );
@@ -49,14 +52,17 @@ function WholeBrain_RSA(varargin)
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
   simfile          = p.Results.simfile;
-  simtype          = p.Results.simtype;
-  filters          = p.Results.filters;
+  sim_varname      = p.Results.sim_varname;
+  filter_labels    = p.Results.filters;
   datafile         = p.Results.data;
+  data_varname     = p.Results.data_varname;
   cvfile           = p.Results.cvfile;
+  cv_varname       = p.Results.cv_varname;
   cvscheme         = p.Results.cvscheme;
   cvholdout        = p.Results.cvholdout;
   finalholdoutInd  = p.Results.finalholdout;
   metafile         = p.Results.metadata;
+  meta_varname     = p.Results.metadata_varname;
   tau              = p.Results.tau;
   lambda           = p.Results.lambda;
   lambda1          = p.Results.lambda1;
@@ -110,8 +116,8 @@ function WholeBrain_RSA(varargin)
 
   end
 
-  StagingContainer = load(fullfile(datadir,metafile), 'metadata');
-  metadata = StagingContainer.metadata;
+  StagingContainer = load(fullfile(datadir,metafile), meta_varname);
+  metadata = StagingContainer.(meta_varname);
   [~,fname,~] = fileparts(datafile);
   subjid = sscanf(fname, 's%d');
   if ~isempty(subjid)
@@ -129,29 +135,34 @@ function WholeBrain_RSA(varargin)
   %% --------------------- Object-bank specific code------------------------------------
   datapath = fullfile(datadir,datafile);
   fprintf('Loading data from  %s, subject number %d\n', datapath, subject);
-  StagingContainer = load(datapath, 'X');
-  X = StagingContainer.X;
+  StagingContainer = load(datapath, data_varname);
+  X = StagingContainer.(data_varname);
   fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
-  if ~isempty(filters)
-    if iscell(filters)
-        n = length(filters);
-        key = filters{1};
-    else
-        n = 1;
-        key = filters;
-    end
-    z = metadata.(key);
-    filter = z;
-    if n > 1
-      for i = 2:n
-        key = filters{i};
-        z = metadata.(key);
-        filter(z) = true;
-      end
-    end
+  if isempty(filter_labels)
+    rowfilter = true(1,size(X,1));
+    colfilter = true(1,size(X,2));
   else
-    filter = true(size(X,1),1);
+    if ~iscell(filter_labels);
+      filter_labels = {filter_labels};
+    end
+    % metadata.filter points to a structured array of filters.
+    % First, force filters to a common orientation.
+    for i = 1:numel(metadata.filter)
+      metadata.filter(i).filter = forceRowVec(metadata.filter(i).filter);
+    end
+    % Then select the filters
+    z = false(1,numel(metadata.filter));
+    for f = filter_labels;
+      z(strcmp(f, {metadata.filter.label})) = true;
+    end
+    z = z & strcmp(data_varname, {metadata.filter.subset});
+    
+    filters.row = metadata.filter(z & [metadata.filter.dimension]==1);
+    filters.col = metadata.filter(z & [metadata.filter.dimension]==2);
+    rowfilter = all(cat(1, filters.row.filter),1);
+    colfilter = all(cat(1, filters.col.filter),1);
+    clear filters;
   end
   
   % load input files and filter outliers more than 5 std dev away
@@ -168,22 +179,24 @@ function WholeBrain_RSA(varargin)
       [~,fname,~] = fileparts(datafile);
       fprintf('Using pre-shuffled MRI data!!! (for %s)\n', fname)
       rdatapath = fullfile(datadir, sprintf('%s_shuffle.mat',fname));
-      load(rdatapath,'X')
+      StagingContainer = load(rdatapath, data_varname);
+      X = StagingContainer.(data_varname);
     case 'use_random'
       [~,fname,~] = fileparts(datafile);
       fprintf('Using predefined random MRI data!!! (for %s)\n', fname)
       rdatapath = fullfile(datadir, sprintf('%s_random.mat',fname));
-      load(rdatapath,'X')
+      StagingContainer = load(rdatapath, data_varname);
+      X = StagingContainer.(data_varname);
     case 'real'
       disp('Using the true data, unaltered.');
     end
   end
-  allzero = any(X); % Identify columns with data
-  [~, reduxFilter] = removeOutliers(X);
-  % Note: reduxFilter field names are reversed...
-  filter = filter & reduxFilter.words';
-  vox = allzero & reduxFilter.voxels;
-  X = X(filter,vox);
+%   allzero = any(X); % Identify columns with data
+%   [~, reduxFilter] = removeOutliers(X);
+%   % Note: reduxFilter field names are reversed...
+%   filter = filter & reduxFilter.words';
+%   vox = allzero & reduxFilter.voxels;
+  X = X(rowfilter, colfilter);
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
   
   % Include voxel for bias
@@ -204,9 +217,10 @@ function WholeBrain_RSA(varargin)
   fprintf('[%3s]\n', msg);
 
   cvpath = fullfile(datadir,cvfile);
-  load(cvpath, 'CV');
-  outlying_words = reduxFilter.words(filter);
-  cvind = CV(outlying_words, cvscheme);
+  StagingContainer = load(cvpath, cv_varname);
+  CV = StagingContainer.(cv_varname);
+%   outlying_words = reduxFilter.words(filter);
+  cvind = CV(rowfilter, cvscheme);
   finalholdout = cvind == finalholdoutInd;
   X(finalholdout,:) = [];
   cvind(finalholdout) = [];
@@ -225,16 +239,16 @@ function WholeBrain_RSA(varargin)
     case 'shuffle'
       disp('Shuffling Similarity Matrix!!!')
       simpath = fullfile(datadir,simfile);
-      allSimStructs = load(simpath);
-      S = allSimStructs.(simtype);
+      StagingContainer = load(simpath, sim_varname);
+      S = StagingContainer.(sim_varname);
       shidx = randperm(size(S,1));
       S = S(shidx,shidx);
 
     case 'random'
       fprintf('Generating totally random Similarity Matrix!!! ')
       simpath = fullfile(datadir,simfile);
-      allSimStructs = load(simpath);
-      S = allSimStructs.(simtype);
+      StagingContainer = load(simpath, sim_varname);
+      S = StagingContainer.(sim_varname);
       x = randn(size(S,1),5);
 
       switch simtype
@@ -267,8 +281,8 @@ function WholeBrain_RSA(varargin)
       [~,fname,~] = fileparts(simfile);
       simfile = sprintf('%s_random.mat',fname);
       simpath = fullfile(datadir, simfile);
-      allSimStructs = load(simpath);
-      S = allSimStructs.(simtype);
+      StagingContainer = load(simpath, sim_varname);
+      S = StagingContainer.(sim_varname);
 
     case 'use_shuffled'
       fprintf('Using pre-shuffled similarity matrix!!! ')
@@ -285,21 +299,21 @@ function WholeBrain_RSA(varargin)
       [~,fname,~] = fileparts(simfile);
       simfile = sprintf('%s_shuffled.mat',fname);
       simpath = fullfile(datadir, simfile);
-      allSimStructs = load(simpath);
-      S = allSimStructs.(simtype);
+      StagingContainer = load(simpath, sim_varname);
+      S = StagingContainer.(sim_varname);
 
     case 'real'
       disp('Using the true similarity matrix, unaltered.')
       simpath = fullfile(datadir,simfile);
-      allSimStructs = load(simpath);
-      S = allSimStructs.(simtype);
+      StagingContainer = load(simpath, sim_varname);
+      S = StagingContainer.(sim_varname);
     end
   else
     simpath = fullfile(datadir,simfile);
-    allSimStructs = load(simpath);
-    S = allSimStructs.(simtype);
+    StagingContainer = load(simpath, sim_varname);
+    S = StagingContainer.(sim_varname);
   end
-  S = S(filter,filter); clear allSimStructs;
+  S = S(rowfilter,rowfilter); clear allSimStructs;
   S = S(~finalholdout, ~finalholdout);
 
   fprintf('Data loaded and processed.\n');
@@ -385,13 +399,13 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaS
 end
 
 function assertRequiredParameters(params)
-  required = {'Gtype'    , 'simfile' , 'simtype'   , 'data'     , ...
+  required = {'Gtype'    , 'simfile' , 'sim_varname'   , 'data', ...
               'metadata' , 'cvfile'  , 'cvscheme'  ,'cvholdout' , 'finalholdout'};
   N = length(required);
   for i = 1:N
     req = required{i};
-    assert(isfield(params,req), '%s must exist in params structure! Exiting.');
-    assert(~isempty(params.(req)), '%s must be set. Exiting.');
+    assert(isfield(params,req), '%s must exist in params structure! Exiting.',req);
+    assert(~isempty(params.(req)), '%s must be set. Exiting.',req);
   end
 end
 
@@ -401,4 +415,12 @@ end
 
 function b = isintegerlike(x)
   b = mod(x,1) == 0;
+end
+
+function r = forceRowVec(v)
+  r = v(1:end);
+end
+
+function c = forceColVec(v)
+  c = v(:);
 end
