@@ -230,8 +230,12 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     end % lam loop
   end % cv loop
   if ~SMALL
-    results.Uz = UzAll;
-    results.Sz = SzAll;
+    if numel(cvset) > 1
+      results.Uz = UzAll(cvset);
+      results.Sz = SzAll(cvset);
+    else
+      results.Uz = UzAll{cvset};
+      results.Sz = SzAll{cvset};
   end
   if ~iscell(nz_rows);
     results.nz_rows = nz_rows(cvset,:,:);

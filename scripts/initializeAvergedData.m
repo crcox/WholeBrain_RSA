@@ -2,13 +2,13 @@
 % Note that in this scheme, the data are replicated to match the similarity
 % structures.
 
-% pathtorepo = '~/src/WholeBrain_RSA/'; % lab machine
-pathtorepo = 'C:/Users/chris/Documents/WholeBrain_RSA/'; % home machine
+pathtorepo = '~/src/WholeBrain_RSA/'; % lab machine
+% pathtorepo = 'C:/Users/chris/Documents/WholeBrain_RSA/'; % home machine
 addpath(fullfile(pathtorepo,'src'),fullfile(pathtorepo,'util'))
-% datadir_in = '~/data/Manchester/data/mat/fromRick';
-% datadir_out = '~/data/Manchester/WholeBrain_RSA/data/avg';
-datadir_in = './UrvashiData';
-datadir_out = './DataTest';
+datadir_in = '~/data/Manchester/data/mat/fromRick';
+datadir_out = '~/data/Manchester/WholeBrain_RSA/data/avg';
+% datadir_in = './UrvashiData';
+% datadir_out = './DataTest';
 
 %% Define metadata
 % number of subjects
@@ -42,12 +42,12 @@ for i = 1:n;
   filtered = '';
   saved = '';
   strlen = fprintf(fmt, i, loaded, outliers_identified, filtered, saved);
-  
+
   name_in = sprintf('subject%02d.mat',i);
   name_out = sprintf('s%02d_avg.mat',i);
   datapath_in = fullfile(datadir_in, name_in);
   datapath_out = fullfile(datadir_out, name_out);
-  
+
   % Load
   try
     StagingContainer = load(datapath_in, data_varname_in);
@@ -55,14 +55,14 @@ for i = 1:n;
   catch ME
     loaded = 'ERROR';
     fprintf(repmat('\b',1,strlen));
-    fprintf(fmt_err, i, loaded, outliers_identified, filtered, saved); 
+    fprintf(fmt_err, i, loaded, outliers_identified, filtered, saved);
     rethrow(ME);
   end
   loaded = 'ok';
   fprintf(repmat('\b',1,strlen));
   strlen = fprintf(fmt, i, loaded, outliers_identified, filtered, saved);
   clear StagingContainer;
-  
+
   % Filter and Aggregate
   try
     Averaged.visual = averageRepeatedTrials(Data.raw(visual,:), stimcode(visual));
@@ -78,7 +78,7 @@ for i = 1:n;
   fprintf(repmat('\b',1,strlen));
   strlen = fprintf(fmt, i, loaded, filtered, outliers_identified, saved);
   clear Data;
-  
+
   % Identify outliers
   try
     [~,filters(i).visual] = removeOutliers(Averaged.visual);
@@ -96,7 +96,7 @@ for i = 1:n;
 
   % save
   try
-    save(datapath_out, '-struct', 'Averaged'); 
+    save(datapath_out, '-struct', 'Averaged');
   catch ME
     saved = 'ERROR';
     fprintf(repmat('\b',1,strlen));
