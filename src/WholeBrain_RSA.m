@@ -99,6 +99,7 @@ function WholeBrain_RSA(varargin)
     end
   end
 
+  % This is hack that made it a little easier to debug things locally.
   switch environment
   case 'condor'
     root = './';
@@ -115,7 +116,10 @@ function WholeBrain_RSA(varargin)
     error('Environment %s not implemented.', environment);
 
   end
+  % End hack
 
+  % I use this "StagingContainer" idiom to have tight control over variable
+  % names in the workspace.
   StagingContainer = load(fullfile(datadir,metafile), meta_varname);
   metadata = StagingContainer.(meta_varname);
   [~,fname,~] = fileparts(datafile);
@@ -125,14 +129,6 @@ function WholeBrain_RSA(varargin)
   end
   metadata = metadata(subject);
 
-%  warning off
-
-  %Testing similarity based feature selection method
-  % to fix/edit:
-  % --extract similarity from distance matrix
-  % --tune @lambda_try (and @R) parameters
-
-  %% --------------------- Object-bank specific code------------------------------------
   datapath = fullfile(datadir,datafile);
   fprintf('Loading data from  %s, subject number %d\n', datapath, subject);
   StagingContainer = load(datapath, data_varname);
@@ -146,26 +142,27 @@ function WholeBrain_RSA(varargin)
     if ~iscell(filter_labels);
       filter_labels = {filter_labels};
     end
+
     % metadata.filter points to a structured array of filters.
     % First, force filters to a common orientation.
     for i = 1:numel(metadata.filter)
       metadata.filter(i).filter = forceRowVec(metadata.filter(i).filter);
     end
+
     % Then select the filters
     z = false(1,numel(metadata.filter));
     for f = filter_labels;
       z(strcmp(f, {metadata.filter.label})) = true;
     end
     z = z & strcmp(data_varname, {metadata.filter.subset});
-    
+
     filters.row = metadata.filter(z & [metadata.filter.dimension]==1);
     filters.col = metadata.filter(z & [metadata.filter.dimension]==2);
     rowfilter = all(cat(1, filters.row.filter),1);
     colfilter = all(cat(1, filters.col.filter),1);
     clear filters;
   end
-  
-  % load input files and filter outliers more than 5 std dev away
+
   if ~isempty(SanityCheckData)
     disp('PSYCH! This is a simulation.');
     switch SanityCheckData
@@ -191,6 +188,10 @@ function WholeBrain_RSA(varargin)
       disp('Using the true data, unaltered.');
     end
   end
+
+  % I used to remove outliers within the code. Now, I do it ahead of time and
+  % store the filters in metadata.filter.
+
 %   allzero = any(X); % Identify columns with data
 %   [~, reduxFilter] = removeOutliers(X);
 %   % Note: reduxFilter field names are reversed...
@@ -198,7 +199,7 @@ function WholeBrain_RSA(varargin)
 %   vox = allzero & reduxFilter.voxels;
   X = X(rowfilter, colfilter);
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
-  
+
   % Include voxel for bias
   fprintf('%-28s', 'Including Bias Unit:');
   msg = 'NO';
@@ -233,7 +234,6 @@ function WholeBrain_RSA(varargin)
   end
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
-
   if ~isempty(SanityCheckModel)
     switch SanityCheckModel
     case 'shuffle'

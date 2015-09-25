@@ -165,6 +165,17 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           end
         end
 
+        % KEY:
+        % Our models assume that S = V*W*V'
+        % V  : The fMRI data.
+        % W  : A matrix of weights.
+        % S  : The true similarity matrix.
+        % Sz : The predicted similarity matrix.
+        % C  : Essentially the first r principle components of S.
+        % Cz : The predicted C.
+        % St : The approximated S, reconstructed from actual C.
+        % Uz : The estimated voxel weights, with a r weights per voxel.
+
         UzAll{i,j,k} = Uz;
 
         k1 = nnz(any(Uz,2));
