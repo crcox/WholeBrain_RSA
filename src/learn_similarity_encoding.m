@@ -142,7 +142,11 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           switch Gtype
           case 'L1L2'
             lam1 = lambda1(j);
-            [Uz,info] = Adlas1(V1, C1, lam1, options);
+            if all(lam==0)
+              Uz = pinv(V1)*C1;
+            else
+              [Uz, info] = Adlas1(V1, C1, lam1, options);
+            end
 
           case 'grOWL'
             switch LambdaSeq
@@ -151,17 +155,27 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
             case 'exponential'
               lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
             end
-            [Uz,info] = Adlas1(V1, C1, lam, options);
+            if all(lam==0)
+              Uz = pinv(V1)*C1;
+            else
+              [Uz, info] = Adlas1(V1, C1, lam, options);
+            end
 
           case 'grOWL2'
+            lam1 = lambda1(k);
             switch LambdaSeq
             case 'linear'
               lam = lam(j)*(d:-1:1)/d;
             case 'exponential'
               lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
+            case 'inf' % needs both lam and lam1
+              lam = [lam+lam1, repmat(lam,1,d-1)];
             end
-            lam1 = lambda1(k);
-            [Uz, info] = Adlas2(V1, C1, lam, lam1, options);
+            if all(lam==0)
+              Uz = pinv(V1)*C1;
+            else
+              [Uz, info] = Adlas1(V1, C1, lam, options);
+            end
           end
         end
 
