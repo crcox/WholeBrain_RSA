@@ -120,7 +120,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     end
     V = bsxfun(@minus,V, mm);
     z = ss > 0;
-    V = bsxfun(@rdivide,V(:,z), ss(z));
+    V(:,z) = bsxfun(@rdivide,V(:,z), ss(z));
 
     C1 = C(train_set,:);
     V1 = V(train_set,:);
