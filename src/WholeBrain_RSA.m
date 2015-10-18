@@ -17,7 +17,7 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'cvfile'           , []        , @ischar        );
   addParameter(p , 'cv_varname'       , []        , @ischar        );
   addParameter(p , 'cvscheme'         , []        , @isnumeric     );
-  addParameter(p , 'cvholdout'        , []        , @isintegerlike );
+  addParameter(p , 'cvholdout'        , []        , @isnumeric     );
   addParameter(p , 'finalholdout'     , 0         , @isintegerlike );
   addParameter(p , 'tau'              , 0.2       , @isnumeric     );
   addParameter(p , 'lambda'           , []        , @isnumeric     );
