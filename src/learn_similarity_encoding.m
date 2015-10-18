@@ -58,9 +58,9 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   ncv = numel(cvset);
 
   % Define results structure
-  results.Uz = []
-  results.Cz = []
-  results.Sz = []
+  results.Uz = [];
+  results.Cz = [];
+  results.Sz = [];
   results.nz_rows =  [];
   results.subject =  [];
   results.cvholdout = [];
