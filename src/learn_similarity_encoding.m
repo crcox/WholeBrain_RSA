@@ -33,7 +33,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
   end
 
-  [n,d] = size(V);
+  [~,d] = size(V);
   Vorig = V;
   BIASUNIT = all(V(:,end)==1);
 
@@ -49,9 +49,8 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     nlam1 = length(lambda1);
   end
 
-  %ncv = max(cvind);
   if isempty(holdout)
-    cvset = 1:ncv;
+    cvset = 1:max(cvind);
   else
     cvset = holdout;
   end
@@ -95,25 +94,19 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   iii = 0; % index into 1-D results structure.
   for i = 1:ncv
     icv = cvset(i);
-    CVsize = nnz(cvind==icv);
     test_set  = cvind==icv;
     train_set = ~test_set;
     fprintf('cv %3d: ', icv)
 
     V = Vorig;
 
-    % remove bias unit for normalization
-    if BIASUNIT
-      V(:,end) = [];
-    end
-
     % normalize
     switch normalize
     case 'zscore_train'
-      mm = mean(V(train_set,:),1);
-      ss = std(V(train_set,:),0,1);
+      mm = mean(V(train_set,1:nv),1);
+      ss = std(V(train_set,1:nv),0,1);
     case 'zscore'
-      mm = mean(V,1);
+      mm = mean(V(:,1),1);
       ss = std(V,0,1);
     case 'stdev'
       mm = 0;
@@ -126,17 +119,12 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
       ss = 1;
     end
     V = bsxfun(@minus,V, mm);
-    V = bsxfun(@rdivide,V, ss);
-
-    % Reinsert bias term
-    if BIASUNIT
-      V(:,end+1) = 1;
-    end
+    z = ss > 0;
+    V = bsxfun(@rdivide,V(:,z), ss(z));
 
     C1 = C(train_set,:);
     V1 = V(train_set,:);
 
-    S1 = S(train_set, train_set);
     for j = 1:nlam
       if isempty(lambda)
         lam = nan(1);
@@ -227,9 +215,9 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         s2  = S(train_set,train_set);
         sz2 = Sz(train_set,train_set);
         st2 = St(train_set,train_set);
-        s2  = s1(lt1);
-        sz2 = sz1(lt1);
-        st2 = st1(lt1);
+        s2  = s2(lt2);
+        sz2 = sz2(lt2);
+        st2 = st2(lt2);
 
         if ~SMALL
           results(iii).Uz = Uz;
