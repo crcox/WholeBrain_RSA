@@ -49,39 +49,56 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     nlam1 = length(lambda1);
   end
 
-  ncv = max(cvind);
+  %ncv = max(cvind);
   if isempty(holdout)
     cvset = 1:ncv;
   else
     cvset = holdout;
   end
+  ncv = numel(cvset);
 
-  err1    = zeros(ncv,nlam,nlam1);
-  err2    = zeros(ncv,nlam,nlam1);
-  cor1    = zeros(ncv,nlam,nlam1);
-  cor2    = zeros(ncv,nlam,nlam1);
-  p1      = zeros(ncv,nlam,nlam1);
-  p2      = zeros(ncv,nlam,nlam1);
-  cor1t   = zeros(ncv,nlam,nlam1);
-  cor2t   = zeros(ncv,nlam,nlam1);
-  p1t     = zeros(ncv,nlam,nlam1);
-  p2t     = zeros(ncv,nlam,nlam1);
-  nz_rows = false(ncv,d,nlam,nlam1);
-  UzAll   = cell(ncv,nlam,nlam1);
-  SzAll   = cell(ncv,nlam,nlam1);
-  if nlam > 1 || nlam1 > 1
-    nz_rows = squeeze(mat2cell(nz_rows, ncv, d, ones(1,nlam), ones(1,nlam1)));
-  end
+  % Define results structure
+  results.Uz = []
+  results.Cz = []
+  results.Sz = []
+  results.nz_rows =  [];
+  results.subject =  [];
+  results.cvholdout = [];
+  results.finalholdout = [];
+  results.lambda = [];
+  results.lambda1 = [];
+  results.LambdaSeq = [];
+  results.Gtype = [];
+  results.bias = [];
+  results.normalize = [];
+  results.nzv = [];
+  results.p1      =  [];
+  results.p2      =  [];
+  results.cor1    =  [];
+  results.cor2    =  [];
+  results.p1t     =  [];
+  results.p2t     =  [];
+  results.cor1t   =  [];
+  results.cor2t   =  [];
+  results.err1    =  [];
+  results.err2    =  [];
+  results.iter    =  [];
+
+  % Preallocate
+  results(numel(cvset)*nlam1*nlam).Uz = [];
 
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
 
   fprintf('%8s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
-  for i = cvset
-    CVsize = nnz(cvind==i);
-    test_set  = cvind==i;
+
+  iii = 0; % index into 1-D results structure.
+  for i = 1:ncv
+    icv = cvset(i);
+    CVsize = nnz(cvind==icv);
+    test_set  = cvind==icv;
     train_set = ~test_set;
-    fprintf('cv %3d: ', i)
+    fprintf('cv %3d: ', icv)
 
     V = Vorig;
 
@@ -128,6 +145,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
       end
 
       for k = 1:nlam1
+        iii = iii + 1;
         if isempty(lambda1)
           lam1 = nan(1);
         else
@@ -190,22 +208,13 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         % St : The approximated S, reconstructed from actual C.
         % Uz : The estimated voxel weights, with a r weights per voxel.
 
-        UzAll{i,j,k} = Uz;
-
+        % Prepare to evaluate solutions
         k1 = nnz(any(Uz,2));
         Wz = Uz*Uz';
         Sz = V*Wz*V';
         Cz = V*Uz;
         St = C*C';
 
-        SzAll{i,j,k} = Sz;
-
-        %store results
-        if nlam > 1 || nlam1 >1
-          nz_rows{j,k}(i,:) = any(Uz,2);
-        else
-          nz_rows(i,:) = any(Uz,2);
-        end
         lt  = logical(tril(true(nnz(test_set)),0));
         s   = S(test_set,test_set);
         sz  = Sz(test_set,test_set);
@@ -214,27 +223,45 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         sz  = sz(lt);
         st  = st(lt);
 
-        lt1 = logical(tril(true(nnz(train_set)),0));
-        s1  = S(train_set,train_set);
-        sz1 = Sz(train_set,train_set);
-        st1 = St(train_set,train_set);
-        s1  = s1(lt1);
-        sz1 = sz1(lt1);
-        st1 = st1(lt1);
+        lt2 = logical(tril(true(nnz(train_set)),0));
+        s2  = S(train_set,train_set);
+        sz2 = Sz(train_set,train_set);
+        st2 = St(train_set,train_set);
+        s2  = s1(lt1);
+        sz2 = sz1(lt1);
+        st2 = st1(lt1);
 
+        if ~SMALL
+          results(iii).Uz = Uz;
+          results(iii).Cz = Cz;
+          results(iii).Sz = Sz;
+          results(iii).nz_rows = any(Uz,2);
+        end
+        % Metadata
+        results(iii).subject =  []; % handled in parent function
+        results(iii).cvholdout = icv;
+        results(iii).finalholdout = []; % handled in parent function
+        results(iii).lambda = lam;
+        results(iii).lambda1 = lam1;
+        results(iii).LambdaSeq = LambdaSeq;
+        results(iii).Gtype = Gtype;
+        results(iii).bias = BIASUNIT;
+        results(iii).normalize = normalize;
+        results(iii).nzv = k1;
         % Comparison to true S matrix
-        p1(i,j,k)    = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-        p2(i,j,k)    = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        cor1(i,j,k)  = corr(s,sz); % test
-        cor2(i,j,k)  = corr(s1,sz1); % train
+        results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+        results(iii).p2      = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+        results(iii).cor1    = corr(s,sz); % test
+        results(iii).cor2    = corr(s2,sz2); % train
         % Comparison to S_trunc = C * C'
-        p1t(i,j,k)   = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-        p2t(i,j,k)   = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        cor1t(i,j,k) = corr(st,sz); % test
-        cor2t(i,j,k) = corr(st1,sz1); % train
+        results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+        results(iii).p2t     = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+        results(iii).cor1t   = corr(st,sz); % test
+        results(iii).cor2t   = corr(st2,sz2); % train
         % Comparison to C
-        err1(i,j,k)  = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
-        err2(i,j,k)  = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
+        results(iii).err1    = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
+        results(iii).err2    = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
+        results(iii).iter    = info.iter;
 
         if isempty(lambda)
           lambda_j = nan;
@@ -254,28 +281,4 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
       end % lam1 loop
     end % lam loop
   end % cv loop
-  if ~SMALL
-    if numel(cvset) > 1
-      results.Uz = UzAll(cvset);
-      results.Sz = SzAll(cvset);
-    else
-      results.Uz = UzAll{cvset};
-      results.Sz = SzAll{cvset};
-  end
-  if ~iscell(nz_rows);
-    results.nz_rows = nz_rows(cvset,:,:);
-  else
-    results.nz_rows = nz_rows;
-  end
-  results.p1      = p1(cvset,:,:);
-  results.p2      = p2(cvset,:,:);
-  results.cor1    = cor1(cvset,:,:);
-  results.cor2    = cor2(cvset,:,:);
-  results.p1t     = p1t(cvset,:,:);
-  results.p2t     = p2t(cvset,:,:);
-  results.cor1t   = cor1t(cvset,:,:);
-  results.cor2t   = cor2t(cvset,:,:);
-  results.err1    = err1(cvset,:,:);
-  results.err2    = err2(cvset,:,:);
-  results.iter    = info.iter;
 end % learn_similarity_encoding

@@ -359,7 +359,17 @@ function WholeBrain_RSA(varargin)
 
   fprintf('Saving stuff.....\n');
 
-  save(matfilename,'-struct','results');
+  [results.subject] = deal(subjid);
+  [results.subject] = deal(finalholdoutInd);
+  % Adjust the cvholdout indexes to accomodate the final holdout index.
+  if isfield(results,'cvholdout')
+    cvholdout = [results.cvholdout];
+    z = cvholdout >= finalholdoutInd;
+    cvholdout(z) = cvholdout(z) + 1;
+    cvholdout = mat2cell(cvholdout(:),ones(numel(cvholdout),1));
+    [results.cvholdout] = deal(cvholdout{:});
+  end
+  save(matfilename,'results');
   save(infofilename,'-struct','info');
 
   fprintf('Done!\n');
