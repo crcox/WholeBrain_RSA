@@ -262,8 +262,15 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           lambda1_k = lambda1(k);
         end
 
+        err1 = results(iii).err1;
+        err2 = results(iii).err2;
+        p1 = results(iii).p1;
+        p2 = results(iii).p2;
+        cor1 = results(iii).cor1;
+        cor2 = results(iii).cor2;
+
         fprintf('%6.2f | %6.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
-          lambda_j,lambda1_k,err1(i,j,k),err2(i,j,k),p1(i,j,k),p2(i,j,k),cor1(i,j,k),cor2(i,j,k),k1);
+          lambda_j,lambda1_k,err1,err2,p1,p2,cor1,cor2,k1);
 
         fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
       end % lam1 loop
