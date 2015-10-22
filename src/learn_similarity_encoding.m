@@ -89,14 +89,13 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
 
-  fprintf('%8s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', '','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
+  fprintf('%5s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
 
   iii = 0; % index into 1-D results structure.
   for i = 1:ncv
     icv = cvset(i);
     test_set  = cvind==icv;
     train_set = ~test_set;
-    fprintf('cv %3d: ', icv)
 
     V = Vorig;
 
@@ -267,12 +266,10 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         p2 = results(iii).p2;
         cor1 = results(iii).cor1;
         cor2 = results(iii).cor2;
-
-        fprintf('%6.2f | %6.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
-          lambda_j,lambda1_k,err1,err2,p1,p2,cor1,cor2,k1);
-
-        fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
+        fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
+          icv, lambda_j,lambda1_k,err1,err2,p1,p2,cor1,cor2,k1);
       end % lam1 loop
     end % lam loop
   end % cv loop
+  fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
 end % learn_similarity_encoding

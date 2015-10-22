@@ -360,7 +360,7 @@ function WholeBrain_RSA(varargin)
   fprintf('Saving stuff.....\n');
 
   [results.subject] = deal(subjid);
-  [results.subject] = deal(finalholdoutInd);
+  [results.finalholdout] = deal(finalholdoutInd);
   % Adjust the cvholdout indexes to accomodate the final holdout index.
   if isfield(results,'cvholdout')
     cvholdout = [results.cvholdout];
