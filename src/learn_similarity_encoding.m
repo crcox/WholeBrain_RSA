@@ -147,7 +147,6 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         else
           switch Gtype
           case 'L1L2'
-            lam1 = lambda1(j);
             if all(lam==0)
               Uz = pinv(V1)*C1;
             else
@@ -157,30 +156,30 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           case 'grOWL'
             switch LambdaSeq
             case 'linear'
-              lam = lam(j)*(d:-1:1)/d;
+              lamseq = lam*(d:-1:1)/d;
             case 'exponential'
-              lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
+              lamseq = lam*sqrt(2*log((d*ones(1,d))./(1:d)));
             end
-            if all(lam==0)
+            if all(lamseq==0)
               Uz = pinv(V1)*C1;
             else
-              [Uz, info] = Adlas1(V1, C1, lam, options);
+              [Uz, info] = Adlas1(V1, C1, lamseq, options);
             end
 
           case 'grOWL2'
-            lam1 = lambda1(k);
             switch LambdaSeq
             case 'linear'
-              lam = lam(j)*(d:-1:1)/d;
+              lamseq = lam*(d:-1:1)/d;
             case 'exponential'
-              lam = lam(j)*sqrt(2*log((d*ones(1,d))./(1:d)));
+              lamseq = lam*sqrt(2*log((d*ones(1,d))./(1:d)));
             case 'inf' % needs both lam and lam1
-              lam = [lam+lam1, repmat(lam,1,d-1)];
+              lamseq = [lam+lam1, repmat(lam,1,d-1)];
             end
-            if all(lam==0)
+            if all(lamseq==0)
               Uz = pinv(V1)*C1;
+              info = struct();
             else
-              [Uz, info] = Adlas1(V1, C1, lam, options);
+              [Uz, info] = Adlas1(V1, C1, lamseq, options);
             end
           end
         end
