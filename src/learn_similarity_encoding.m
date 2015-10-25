@@ -148,6 +148,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           case 'L1L2'
             if all(lam==0)
               Uz = pinv(V1)*C1;
+              info = struct();
             else
               [Uz, info] = Adlas1(V1, C1, lam1, options);
             end
@@ -161,6 +162,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
             end
             if all(lamseq==0)
               Uz = pinv(V1)*C1;
+              info = struct();
             else
               [Uz, info] = Adlas1(V1, C1, lamseq, options);
             end
