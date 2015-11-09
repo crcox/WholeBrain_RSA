@@ -11,6 +11,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   addParameter(p , 'normalize' , []);
   addParameter(p , 'LambdaSeq' , []);
   addParameter(p , 'DEBUG'     , false);
+  addParameter(p , 'PermutationTest'     , false);
   addParameter(p , 'AdlasOpts' , struct());
   addParameter(p , 'SmallFootprint' ,false);
   parse(p, S, V, Gtype, varargin{:});
@@ -25,6 +26,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   holdout   = p.Results.cvholdout;
   normalize = p.Results.normalize;
   LambdaSeq = p.Results.LambdaSeq;
+  PerumtationTest = p.Results.PermutationTest
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
@@ -88,6 +90,14 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
 
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
+
+  if PermutationTest
+    n = size(C,1);
+    for i = 1:r
+      permix = randperm(n);
+      C(:,i) = C(permix, i);
+    end
+  end
 
   fprintf('%5s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
 

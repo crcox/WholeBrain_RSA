@@ -3,6 +3,7 @@ function WholeBrain_RSA(varargin)
   p.KeepUnmatched = false;
   % ----------------------Set parameters-----------------------------------------------
   addParameter(p , 'debug'            , false     , @islogicallike );
+  addParameter(p , 'PermutationTest'  , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
   addParameter(p , 'Gtype'            , []        , @ischar        );
   addParameter(p , 'normalize'        , false                      );
@@ -47,6 +48,7 @@ function WholeBrain_RSA(varargin)
   assertRequiredParameters(p.Results);
 
   DEBUG            = p.Results.debug;
+  PermutationTest  = p.Results.PermutationTest;
   SmallFootprint   = p.Results.SmallFootprint;
   Gtype            = p.Results.Gtype;
   normalize        = p.Results.normalize;
@@ -163,32 +165,6 @@ function WholeBrain_RSA(varargin)
     clear filters;
   end
 
-  if ~isempty(SanityCheckData)
-    disp('PSYCH! This is a simulation.');
-    switch SanityCheckData
-    case 'shuffle'
-      disp('Shuffling rows of MRI data!!!')
-      X = X(randperm(size(X,1)),:);
-    case 'random'
-      disp('Generating totally random MRI data!!!')
-      X = randn(size(X));
-    case 'use_shuffled'
-      [~,fname,~] = fileparts(datafile);
-      fprintf('Using pre-shuffled MRI data!!! (for %s)\n', fname)
-      rdatapath = fullfile(datadir, sprintf('%s_shuffle.mat',fname));
-      StagingContainer = load(rdatapath, data_varname);
-      X = StagingContainer.(data_varname);
-    case 'use_random'
-      [~,fname,~] = fileparts(datafile);
-      fprintf('Using predefined random MRI data!!! (for %s)\n', fname)
-      rdatapath = fullfile(datadir, sprintf('%s_random.mat',fname));
-      StagingContainer = load(rdatapath, data_varname);
-      X = StagingContainer.(data_varname);
-    case 'real'
-      disp('Using the true data, unaltered.');
-    end
-  end
-
   % I used to remove outliers within the code. Now, I do it ahead of time and
   % store the filters in metadata.filter.
 
@@ -234,85 +210,10 @@ function WholeBrain_RSA(varargin)
   end
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
-  if ~isempty(SanityCheckModel)
-    switch SanityCheckModel
-    case 'shuffle'
-      disp('Shuffling Similarity Matrix!!!')
-      simpath = fullfile(datadir,simfile);
-      StagingContainer = load(simpath, sim_varname);
-      S = StagingContainer.(sim_varname);
-      shidx = randperm(size(S,1));
-      S = S(shidx,shidx);
+  simpath = fullfile(datadir,simfile);
+  StagingContainer = load(simpath, sim_varname);
+  S = StagingContainer.(sim_varname);
 
-    case 'random'
-      fprintf('Generating totally random Similarity Matrix!!! ')
-      simpath = fullfile(datadir,simfile);
-      StagingContainer = load(simpath, sim_varname);
-      S = StagingContainer.(sim_varname);
-      x = randn(size(S,1),5);
-
-      switch simtype
-      case 'inner'
-        fprintf('(inner product)\n');
-        S = x * x';
-      case 'cor'
-        fprintf('(correlation)\n');
-        S = corr(x');
-      case 'cosine'
-        fprintf('(cosine)\n');
-        S = cosinesimilarity(x);
-      case 'earthmover'
-        fprintf('(cosine---EMD not implemented)\n');
-        S = cosinesimilarity(x);
-      end
-
-    case 'use_random'
-      fprintf('Using predefined random similarity matrix!!! ')
-      switch simtype
-      case 'inner'
-        fprintf('(inner product)\n');
-      case 'cor'
-        fprintf('(correlation)\n');
-      case 'cosine'
-        fprintf('(cosine)\n');
-      case 'earthmover'
-        fprintf('(cosine---EMD not implemented)\n');
-      end
-      [~,fname,~] = fileparts(simfile);
-      simfile = sprintf('%s_random.mat',fname);
-      simpath = fullfile(datadir, simfile);
-      StagingContainer = load(simpath, sim_varname);
-      S = StagingContainer.(sim_varname);
-
-    case 'use_shuffled'
-      fprintf('Using pre-shuffled similarity matrix!!! ')
-      switch simtype
-      case 'inner'
-        fprintf('(inner product)\n');
-      case 'cor'
-        fprintf('(correlation)\n');
-      case 'cosine'
-        fprintf('(cosine)\n');
-      case 'earthmover'
-        fprintf('(Earth Movers Distance)\n');
-      end
-      [~,fname,~] = fileparts(simfile);
-      simfile = sprintf('%s_shuffled.mat',fname);
-      simpath = fullfile(datadir, simfile);
-      StagingContainer = load(simpath, sim_varname);
-      S = StagingContainer.(sim_varname);
-
-    case 'real'
-      disp('Using the true similarity matrix, unaltered.')
-      simpath = fullfile(datadir,simfile);
-      StagingContainer = load(simpath, sim_varname);
-      S = StagingContainer.(sim_varname);
-    end
-  else
-    simpath = fullfile(datadir,simfile);
-    StagingContainer = load(simpath, sim_varname);
-    S = StagingContainer.(sim_varname);
-  end
   S = S(rowfilter,rowfilter); clear allSimStructs;
   S = S(~finalholdout, ~finalholdout);
 
@@ -328,6 +229,7 @@ function WholeBrain_RSA(varargin)
                       'cvholdout'      , cvholdout      , ...
                       'normalize'      , normalize      , ...
                       'DEBUG'          , DEBUG          , ...
+                      'PermutationTest', PermutationTest, ...
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
 
@@ -340,6 +242,7 @@ function WholeBrain_RSA(varargin)
                       'cvholdout'      , cvholdout      , ...
                       'normalize'      , normalize      , ...
                       'DEBUG'          , DEBUG          , ...
+                      'PermutationTest', PermutationTest, ...
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
 
@@ -353,6 +256,7 @@ function WholeBrain_RSA(varargin)
                       'cvholdout'      , cvholdout      , ...
                       'normalize'      , normalize      , ...
                       'DEBUG'          , DEBUG          , ...
+                      'PermutationTest', PermutationTest, ...
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
   end
