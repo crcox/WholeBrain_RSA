@@ -26,7 +26,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   holdout   = p.Results.cvholdout;
   normalize = p.Results.normalize;
   LambdaSeq = p.Results.LambdaSeq;
-  PerumtationTest = p.Results.PermutationTest
+  PermutationTest = p.Results.PermutationTest
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
@@ -91,8 +91,10 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
 
+  fprintf('PermutationTest: %d\n', PermutationTest);
   if PermutationTest
     n = size(C,1);
+    fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
     for i = 1:r
       permix = randperm(n);
       C(:,i) = C(permix, i);
