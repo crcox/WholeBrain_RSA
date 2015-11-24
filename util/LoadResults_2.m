@@ -57,9 +57,37 @@ function [results, params] = LoadResults(varargin)
   StagingContainer = load(metapath, meta_varname);
   metadata = StagingContainer.(meta_varname);
 
+  %% Preallocate result structure. Assumption is that all result files are
+  %identical size with same fields.
+  i = 0;
+  FileExists = false;
+  while ~FileExists
+    i = i + 1;
+    jobdir     = fullfile(resultdir, jobdirs(i).name);
+    resultpath = fullfile(jobdir, resultfile);
+    FileExists = exist(resultpath, 'file') == 2;
+  end
+  tmp = load(resultpath);
+  if ~isfield(tmp,'results')
+    tmp2 = tmp; clear tmp;
+    m = numel(tmp2.err1);
+    tmp.results = init_results();
+    tmp.results(m).job = [];
+    clear tmp2;
+  end
+  R = tmp.results;
+  if ~isempty(SKIP)
+    R = rmfield(R, SKIP);
+  end
+  N = numel(jobdirs) * numel(R);
+  results = R(1);
+  results.job = 0;
+  results(N).job = 0;
+
   n = length(jobdirs);
   nchar = 0;
   fprintf('Loading job ');
+  cursor = 0;
   for i = 1:n;
     fprintf(repmat('\b', 1, nchar));
     nchar = fprintf('%d of %d', i, n);
@@ -98,77 +126,53 @@ function [results, params] = LoadResults(varargin)
     if ~exist(resultpath, 'file')
       continue;
     end
-    R = load(resultpath);
-%    nrow = size(R.Sz, 1);
-%    if params(i).bias
-%      ncol = size(R.Uz, 1)-1;
-%      R.nz_rows(end) = [];
-%    else
-%      ncol = size(R.Uz, 1);
-%    end
-
-    % Construct filters
-    if isempty(filter_labels)
-      rowfilter = true(1, nrow);
-      colfilter = true(1, ncol);
-    else
-      if ~iscell(filter_labels);
-        filter_labels = {filter_labels};
-      end
-      % M.filter points to a structured array of filters.
-      % First, force filters to a common orientation.
-      for ii = 1:numel(M.filter)
-        M.filter(ii).filter = forceRowVec(M.filter(ii).filter);
-      end
-      % Then select the filters
-      z = false(1,numel(M.filter));
-      for f = filter_labels;
-        z(strcmp(f, {M.filter.label})) = true;
-      end
-      z = z & strcmp(data_varname, {M.filter.subset});
-
-      filters.row = M.filter(z & [M.filter.dimension]==1);
-      filters.col = M.filter(z & [M.filter.dimension]==2);
-      if isempty(filters.row)
-        rowfilter = true(1, nrow);
-      else
-        rowfilter = all(cat(1, filters.row.filter),1);
-      end
-      if isempty(filters.col)
-        colfilter = true(1, ncol);
-      else
-        colfilter = all(cat(1, filters.col.filter),1);
-      end
-      clear filters;
+    tmp = load(resultpath);
+    % For back compatibility
+    if ~isfield(tmp,'results')
+      tmp2 = tmp; clear tmp;
+      m = numel(tmp2.err1);
+      tmp.results = init_results();
+      tmp.results(m).job = [];
+      nz_rows = mat2cell(tmp2.nz_rows, ones(m,1), size(tmp2.nz_rows,2));
+      p1 = mat2cell(tmp2.p1, ones(m,1), 1);
+      p2 = mat2cell(tmp2.p2, ones(m,1), 1);
+      cor1 = mat2cell(tmp2.cor1, ones(m,1), 1);
+      cor2 = mat2cell(tmp2.cor2, ones(m,1), 1);
+      p1t = mat2cell(tmp2.p1t, ones(m,1), 1);
+      p2t = mat2cell(tmp2.p2t, ones(m,1), 1);
+      cor1t = mat2cell(tmp2.cor1t, ones(m,1), 1);
+      cor2t = mat2cell(tmp2.cor2t, ones(m,1), 1);
+      err1 = mat2cell(tmp2.err1, ones(m,1), 1);
+      err2 = mat2cell(tmp2.err2, ones(m,1), 1);
+      iter = tmp2.iter;
+      [tmp.results.nz_rows] = deal(nz_rows{:});
+      [tmp.results.p1] = deal(p1{:});
+      [tmp.results.p2] = deal(p2{:});
+      [tmp.results.cor1] = deal(cor1{:});
+      [tmp.results.cor2] = deal(cor2{:});
+      [tmp.results.p1t] = deal(p1t{:});
+      [tmp.results.p2t] = deal(p2t{:});
+      [tmp.results.cor1t] = deal(cor1t{:});
+      [tmp.results.cor2t] = deal(cor2t{:});
+      [tmp.results.err1] = deal(err1{:});
+      [tmp.results.err2] = deal(err2{:});
+      [tmp.results.iter] = deal(iter);
+      clear tmp2;
     end
-    cvfilter    = cvind == CV(rowfilter,cvscheme);
-    finalfilter = finalind == CV(rowfilter,cvscheme);
-
-    % apply filters
-    S = SS(rowfilter,rowfilter);
-    R.S = S(~finalfilter,~finalfilter);
-    R.S_test = S(cvfilter,cvfilter);
-    XYZ = XYZ(colfilter,:);
-
-    % log coordinates of selected voxels
-    R.coords.label = coord_varname;
-    R.coords.xyz = XYZ(R.nz_rows,:);
-
-    % log metadata
-    R.cvind = cvind;
-    R.cvfilter = cvfilter;
-    R.finalfilter = finalfilter;
-
-    % Drop any variables that should not be held in memory
+    R = tmp.results;
     if ~isempty(SKIP)
-      nskip = length(SKIP);
-      for ii = 1:nskip
-        R = rmfield(R, SKIP{ii});
-      end
+      R = rmfield(R, SKIP);
     end
-
-    results(i) = R;
-
+    [R.job] = deal(i);
+    a = cursor + 1;
+    b = cursor + numel(R);
+    results(a:b) = R;
+    cursor = b;
+  end
+  a = cursor + 1;
+  n = N;
+  if a < b
+    results(a:b) = [];
   end
   fprintf('\n')
 end
@@ -247,4 +251,33 @@ end
 
 function c = forceColVec(v)
   c = v(:);
+end
+
+function results = init_results()
+  results.Uz = [];
+  results.Cz = [];
+  results.Sz = [];
+  results.nz_rows = [];
+  results.subject = [];
+  results.cvholdout = [];
+  results.finalholdout = [];
+  results.lambda = [];
+  results.lambda1 = [];
+  results.LambdaSeq = [];
+  results.Gtype = [];
+  results.bias = [];
+  results.normalize = [];
+  results.nzv = [];
+  results.p1 = [];
+  results.p2 = [];
+  results.cor1 = [];
+  results.cor2 = [];
+  results.p1t = [];
+  results.p2t = [];
+  results.cor1t = [];
+  results.cor2t = [];
+  results.err1 = [];
+  results.err2 = [];
+  results.iter = [];
+  results.job = [];
 end

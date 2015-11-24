@@ -26,6 +26,8 @@ function WriteTable(filename,results,params,varargin)
   % List all possible fields and their desired format code
   fieldFMT = struct( ...
     'iter'         , '%d'   , ...
+    'job'          , '%d'   , ...
+    'subject'      , '%d'   , ...
     'finalholdout' , '%d'   , ...
     'cvholdout'    , '%d'   , ...
     'data'         , '%s'   , ...
@@ -44,28 +46,22 @@ function WriteTable(filename,results,params,varargin)
     'err2'         , '%.4f' , ...
     'FroErr1'      , '%.4f' , ...
     'FroErr2'      , '%.4f' , ...
-    'nz_rows'      , '%d');
+    'nz_rows'      , '%d'   , ...
+    'nzv'          , '%d');
 
   hdrFMT = strjoin(repmat({'%s'},1,length(fields)),',');
   tmp = cellfun(@(x) fieldFMT.(x), fields, 'unif', 0);
   dataFMT = strjoin(tmp,',');
   fprintf(fid,[hdrFMT,'\n'],fields{:});
 
-  N = length(params);
+  N = length(results);
   for i = 1:N
     R = results(i);
-    P = params(i);
     out = cell(1,length(fields));
     for j = 1:length(fields);
       key = fields{j};
-      if isfield(P,key)
-        out{j} = P.(key);
-      else
-        if strcmp(key,'nz_rows')
-          out{j} = nnz(R.(key));
-        else
-          out{j} = R.(key);
-        end
+      if isfield(R,key)
+        out{j} = R.(key);
       end
     end
     fprintf(fid,[dataFMT,'\n'], out{:});
