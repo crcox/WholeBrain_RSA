@@ -95,10 +95,14 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   if PermutationTest
     n = size(C,1);
     fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
+    fprintf('First 10 rows of C, before shuffling.\n')
+    disp(C(1:10,:))
     for i = 1:r
       permix = randperm(n);
       C(:,i) = C(permix, i);
     end
+    fprintf('First 10 rows of C, after shuffling.\n')
+    disp(C(1:10,:))
   end
 
   fprintf('%5s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
