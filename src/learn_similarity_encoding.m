@@ -252,19 +252,21 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         results(iii).bias = BIASUNIT;
         results(iii).normalize = normalize;
         results(iii).nzv = k1;
-        % Comparison to true S matrix
-        results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+
+        if any(test_set)
+          results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+          results(iii).cor1    = corr(s,sz); % test
+          results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+          results(iii).cor1t   = corr(st,sz); % test
+          results(iii).err1    = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
+        end
+
         results(iii).p2      = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        results(iii).cor1    = corr(s,sz); % test
         results(iii).cor2    = corr(s2,sz2); % train
-        % Comparison to S_trunc = C * C'
-        results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
         results(iii).p2t     = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        results(iii).cor1t   = corr(st,sz); % test
         results(iii).cor2t   = corr(st2,sz2); % train
-        % Comparison to C
-        results(iii).err1    = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
         results(iii).err2    = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
+
         results(iii).iter    = info.iter;
 
         if isempty(lambda)
