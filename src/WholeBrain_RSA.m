@@ -3,6 +3,7 @@ function WholeBrain_RSA(varargin)
   p.KeepUnmatched = false;
   % ----------------------Set parameters-----------------------------------------------
   addParameter(p , 'debug'            , false     , @islogicallike );
+  addParameter(p , 'RandomSeed'       , 0                          );
   addParameter(p , 'PermutationTest'  , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
   addParameter(p , 'Gtype'            , []        , @ischar        );
@@ -44,12 +45,14 @@ function WholeBrain_RSA(varargin)
     parse(p, jcell{:});
   end
 
+
   % private function.
   assertRequiredParameters(p.Results);
 
   DEBUG            = p.Results.debug;
   PermutationTest  = p.Results.PermutationTest;
   SmallFootprint   = p.Results.SmallFootprint;
+  RandomSeed       = p.Results.RandomSeed;
   Gtype            = p.Results.Gtype;
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
@@ -73,6 +76,8 @@ function WholeBrain_RSA(varargin)
   environment      = p.Results.environment;
   SanityCheckData  = p.Results.SanityCheckData;
   SanityCheckModel = p.Results.SanityCheckModel;
+
+  rng(RandomSeed);
 
   % Check that the correct parameters are passed, given the desired algorithm
   [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
