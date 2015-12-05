@@ -2,13 +2,8 @@ function [results, params] = LoadResults(varargin)
   p = inputParser();
   addParameter(p,'ResultDir','.',@ischar);
   addParameter(p,'DataDir','~/MCW/WholeBrain_RSA/data/avg',@ischar)
-  addParameter(p,'Coordinates','coords.mat')
-  addParameter(p,'coord_varname','mni')
-  addParameter(p,'SimilarityFile','semantic_model.mat',@ischar)
-  addParameter(p,'SimilarityType','cor',@ischar)
-  addParameter(p,'CVSchemesFile','CV_schemes.mat',@ischar)
   addParameter(p,'MetadataFile','metadata.mat',@ischar)
-  addParameter(p,'Filters',{'TrueAnimals'},@iscell)
+  addParameter(p,'MetadataVarname','metadata',@ischar)
   addParameter(p,'ResultFile','',@ischar);
   addParameter(p,'ParamFile','',@ischar);
   addParameter(p,'SortJobs',false,@islogical)
@@ -17,22 +12,16 @@ function [results, params] = LoadResults(varargin)
 
   resultdir     = p.Results.ResultDir;
   datadir       = p.Results.DataDir;
-  simfile       = p.Results.SimilarityFile;
-  sim_varname   = p.Results.SimilarityType;
-  coordfile     = p.Results.Coordinates;
-  coord_varname = p.Results.coord_varname;;
-  cvsfile       = p.Results.CVSchemesFile;
-  cv_varname    = 'CV';
   metafile      = p.Results.MetadataFile;
-  meta_varname  = 'metadata';
-  filter_labels = p.Results.Filters;
+  meta_varname  = p.Results.MetadataVarname;
   sortjobs      = p.Results.SortJobs;
   resultfile    = p.Results.ResultFile;
-  paramfile     = p.Results.ParamFile;
+  paramsfilename = p.Results.ParamFile;
   SKIP          = p.Results.SkipFields;
+
   allfiles      = dir(resultdir);
   alldirs       = allfiles([allfiles.isdir]);
-  jobdirs       = SelectJobDirs(alldirs, 'root',resultdir, 'sort', sortjobs);
+  jobdirs       = SelectJobDirs(alldirs, 'ParamsFilename', paramsfilename, 'root',resultdir, 'sort', sortjobs);
 
   if ~isempty(SKIP)
     SkipStr = SKIP;
@@ -41,176 +30,137 @@ function [results, params] = LoadResults(varargin)
     fprintf('Fields %s will be skipped.\n', SkipStr);
   end
 
-  cvspath = fullfile(datadir,cvsfile);
-  StagingContainer = load(cvspath, cv_varname);
-  CV = StagingContainer.(cv_varname);
-
-  coordpath = fullfile(datadir,coordfile);
-  StagingContainer = load(coordpath, 'coords');
-  coords = StagingContainer.('coords');
-
-  simpath  = fullfile(datadir,simfile);
-  StagingContainer = load(simpath, sim_varname);
-  SS = StagingContainer.(sim_varname);
-
   metapath = fullfile(datadir, metafile);
   StagingContainer = load(metapath, meta_varname);
   metadata = StagingContainer.(meta_varname);
 
+  %% Preallocate result structure. Assumption is that all result files are
+  %identical size with same fields.
+  i = 0;
+  FileExists = false;
+  while ~FileExists
+    i = i + 1;
+    jobdir     = fullfile(resultdir, jobdirs(i).name);
+    resultpath = fullfile(jobdir, resultfile);
+    FileExists = exist(resultpath, 'file') == 2;
+  end
+  tmp = load(resultpath);
+  if ~isfield(tmp,'results')
+    tmp2 = tmp; clear tmp;
+    m = numel(tmp2.err1);
+    tmp.results = init_results();
+    tmp.results(m).job = [];
+    clear tmp2;
+  end
+  R = tmp.results;
+  if ~isempty(SKIP)
+    R = rmfield(R, SKIP);
+  end
+  N = numel(jobdirs) * numel(R);
+  results = R(1);
+  results.job = 0;
+  results(N).job = 0;
+
   n = length(jobdirs);
   nchar = 0;
   fprintf('Loading job ');
+  cursor = 0;
   for i = 1:n;
     fprintf(repmat('\b', 1, nchar));
     nchar = fprintf('%d of %d', i, n);
 
     % load parameter file
     jobdir      = fullfile(resultdir, jobdirs(i).name);
-    parampath   = fullfile(jobdir,paramfile);
-    tmp         = loadjson(parampath);
+    paramspath  = fullfile(jobdir,paramsfilename);
+    tmp         = loadjson(paramspath);
     tmp.jobdir  = jobdir;
     params(i)   = tmp;
     clear tmp;
-
-    data_varname = params(i).data_varname;
-    sind = sscanf(params(i).data,'s%d');
-    sidx = find([coords.subject]==sind);
-    XYZ = coords(sidx).(coord_varname);
-    sidx = find([metadata.subject]==sind);
-    M = metadata(sidx);
-
-    % Pull cv indexes
-    cvind       = params(i).cvholdout;
-    finalind    = params(i).finalholdout;
-    cvscheme    = params(i).cvscheme;
-    if finalind > 0
-      if cvind > finalind
-        cv = cvind - 1;
-      else
-        cv = cvind;
-      end
-    else
-        cv = cvind;
-    end
 
     % load results file
     resultpath = fullfile(jobdir, resultfile);
     if ~exist(resultpath, 'file')
       continue;
     end
-    R = load(resultpath);
-%    nrow = size(R.Sz, 1);
-%    if params(i).bias
-%      ncol = size(R.Uz, 1)-1;
-%      R.nz_rows(end) = [];
-%    else
-%      ncol = size(R.Uz, 1);
-%    end
-
-    % Construct filters
-    if isempty(filter_labels)
-      rowfilter = true(1, nrow);
-      colfilter = true(1, ncol);
-    else
-      if ~iscell(filter_labels);
-        filter_labels = {filter_labels};
-      end
-      % M.filter points to a structured array of filters.
-      % First, force filters to a common orientation.
-      for ii = 1:numel(M.filter)
-        M.filter(ii).filter = forceRowVec(M.filter(ii).filter);
-      end
-      % Then select the filters
-      z = false(1,numel(M.filter));
-      for f = filter_labels;
-        z(strcmp(f, {M.filter.label})) = true;
-      end
-      z = z & strcmp(data_varname, {M.filter.subset});
-
-      filters.row = M.filter(z & [M.filter.dimension]==1);
-      filters.col = M.filter(z & [M.filter.dimension]==2);
-      if isempty(filters.row)
-        rowfilter = true(1, nrow);
-      else
-        rowfilter = all(cat(1, filters.row.filter),1);
-      end
-      if isempty(filters.col)
-        colfilter = true(1, ncol);
-      else
-        colfilter = all(cat(1, filters.col.filter),1);
-      end
-      clear filters;
+    tmp = load(resultpath);
+    % For back compatibility
+    if ~isfield(tmp,'results')
+      tmp = repackageresults(tmp);
     end
-    cvfilter    = cvind == CV(rowfilter,cvscheme);
-    finalfilter = finalind == CV(rowfilter,cvscheme);
-
-    % apply filters
-    S = SS(rowfilter,rowfilter);
-    R.S = S(~finalfilter,~finalfilter);
-    R.S_test = S(cvfilter,cvfilter);
-    XYZ = XYZ(colfilter,:);
-
-    % log coordinates of selected voxels
-    R.coords.label = coord_varname;
-    R.coords.xyz = XYZ(R.nz_rows,:);
-
-    % log metadata
-    R.cvind = cvind;
-    R.cvfilter = cvfilter;
-    R.finalfilter = finalfilter;
-
-    % Drop any variables that should not be held in memory
+    R = tmp.results;
+    [R.job] = deal(i);
     if ~isempty(SKIP)
-      nskip = length(SKIP);
-      for ii = 1:nskip
-        R = rmfield(R, SKIP{ii});
-      end
+      R = rmfield(R, SKIP);
     end
-
-    results(i) = R;
-
+    if ~isfield(results, 'data_varname')
+      [results.data_varname] = deal([]);
+    end
+    if ~isfield(results, 'filters')
+      [results.filters] = deal([]);
+    end
+    if isfield(params, 'data_varname') && ~isfield(R, 'data_varname')
+      [R.data_varname] = deal(params(i).data_varname);
+    end
+    if isfield(params, 'filters') && ~isfield(R, 'filters')
+      [R.filters] = deal(params(i).filters);
+    end
+    a = cursor + 1;
+    b = cursor + numel(R);
+    results(a:b) = R;
+    cursor = b;
+  end
+  a = cursor + 1;
+  n = N;
+  if a < b
+    results(a:b) = [];
   end
   fprintf('\n')
 end
 
 %% Private Functions
-function y = selectcv(x,cv)
-  if numel(x)==1
-    if iscell(x);
-      y = x{1};
-    else
-      y = x;
-    end
-    return
-  end
-
-  dim = size(x);
-  if iscell(x)
-    if length(dim)>1 && all(dim>1)
-      y = x(cv,:);
-    else
-      y = x{cv};
-    end
-  else
-    if length(dim)>1 && all(dim>1)
-      y = x(cv,:);
-    else
-      y = x(cv);
-    end
-  end
+function R = repackageresults(r)
+  m = numel(r.err1);
+  R.results = init_results();
+  R.results(m).job = [];
+  nz_rows = mat2cell(r.nz_rows, ones(m,1), size(r.nz_rows,2));
+  p1 = mat2cell(r.p1, ones(m,1), 1);
+  p2 = mat2cell(r.p2, ones(m,1), 1);
+  cor1 = mat2cell(r.cor1, ones(m,1), 1);
+  cor2 = mat2cell(r.cor2, ones(m,1), 1);
+  p1t = mat2cell(r.p1t, ones(m,1), 1);
+  p2t = mat2cell(r.p2t, ones(m,1), 1);
+  cor1t = mat2cell(r.cor1t, ones(m,1), 1);
+  cor2t = mat2cell(r.cor2t, ones(m,1), 1);
+  err1 = mat2cell(r.err1, ones(m,1), 1);
+  err2 = mat2cell(r.err2, ones(m,1), 1);
+  iter = r.iter;
+  [R.results.nz_rows] = deal(nz_rows{:});
+  [R.results.p1] = deal(p1{:});
+  [R.results.p2] = deal(p2{:});
+  [R.results.cor1] = deal(cor1{:});
+  [R.results.cor2] = deal(cor2{:});
+  [R.results.p1t] = deal(p1t{:});
+  [R.results.p2t] = deal(p2t{:});
+  [R.results.cor1t] = deal(cor1t{:});
+  [R.results.cor2t] = deal(cor2t{:});
+  [R.results.err1] = deal(err1{:});
+  [R.results.err2] = deal(err2{:});
+  [R.results.iter] = deal(iter);
 end
 
 function jobdirs = SelectJobDirs(dirs,varargin)
   p = inputParser;
   addRequired(p, 'dirs');
+  addParameter(p, 'ParamsFilename','params.json', @ischar);
   addParameter(p, 'root','.', @ischar);
   addParameter(p, 'sort',false, @islogical);
   parse(p, dirs, varargin{:});
-  
+
   dirs = p.Results.dirs;
+  paramsfilename = p.Results.ParamsFilename;
   SORT = p.Results.sort;
   root = p.Results.root;
-  
+
   N = length(dirs);
   isJobDir = false(N,1);
   for ii = 1:N
@@ -220,8 +170,8 @@ function jobdirs = SelectJobDirs(dirs,varargin)
       continue
     end
     % Check if contains parameter file.
-    paramfile = fullfile(jobdir, 'params.json');
-    if exist(paramfile, 'file')
+    paramspath = fullfile(jobdir, paramsfilename);
+    if exist(paramspath, 'file')
       isJobDir(ii) = true;
     end
   end
@@ -239,12 +189,4 @@ function jobdirs = SelectJobDirs(dirs,varargin)
     jobdirs = jobdirs(ix);
   end
   fprintf('Found %d job directories.\n', length(jobdirs))
-end
-
-function r = forceRowVec(v)
-  r = v(1:end);
-end
-
-function c = forceColVec(v)
-  c = v(:);
 end

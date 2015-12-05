@@ -1,66 +1,43 @@
-function WriteVoxels(outdir,select,results,params,coords,varargin)
+function WriteVoxels(outdir,results,varargin)
 % This function will write out a single directory worth of data, where a
 % directory will include all cross validation instances for all subjects for a
 % particular configuration of parameters.
-% The file naming convention is subject_finalholdout_cvholdout.CoordLabel.
+% The file naming convention is subject_finalholdout_cvholdout.CoordsLabel.
   p = inputParser();
-  addRequired(p, 'outdir');
-  addRequired(p, 'select')
-  addRequired(p, 'results');
-  addRequired(p, 'params');
-  addRequired(p, 'coords');
-  addParameter(p, 'CoordLabel', 'mni');
-  addParameter(p, 'SubjectNumberFMT', 's%d_rep.mat');
-  parse(p, outdir, select, results, params, coords, varargin{:});
+  addRequired(p, 'outdir', @ischar);
+  addRequired(p, 'results', @isstruct);
+  addParameter(p, 'CoordsLabel', 'mni', @ischar);
+  addParameter(p, 'VoxelValue', '', @ischar);
+  parse(p, outdir, results, varargin{:});
 
   outdir    = p.Results.outdir;
   results   = p.Results.results;
-  select    = p.Results.select;
-  params    = p.Results.params;
-  coords    = p.Results.coords;
-  xyzlab    = p.Results.CoordLabel;
-  sjfmt     = p.Results.SubjectNumberFMT;
+  xyzlab    = p.Results.CoordsLabel;
+  valuefield = p.Results.VoxelValue;
 
-  assert(all(structfun(@isscalar, select)|structfun(@ischar, select)));
-
-  n = length(select);
-  z = false(size(params));
-  for i = 1:n
-    fields = fieldnames(select);
-    key = fields{i};
-    val = select.(key);
-    if isscalar(val)
-      z = z | ([params.(key)] == val);
-    elseif ischar(val)
-      z = z | strcmp(val, {params.(key)});
-    end
-  end
-
-  results = results(z);
-  params = params(z);
-
-  n = length(params);
+  n = length(results);
   fprintf('Writing files:\n');
   for i = 1:n
-    P  = params(i);
     R  = results(i);
-    dt = P.data;
-    fh = P.finalholdout;
-    cv = P.cvholdout;
-    sj = sscanf(dt, sjfmt);
+    sj = R.subject;
+    fh = R.finalholdout;
+    cv = R.cvholdout;
 
     fname = sprintf('%02d_%02d_%02d.%s', sj, fh, cv, xyzlab);
     fpath = fullfile(outdir, fname);
     fprintf('%s\n', fpath);
-    sind = find([coords.subject] == sj);
-    xyz = coords(sind).(xyzlab);
-    if size(xyz,1) == numel(R.nz_rows,1);
-      xyzb = xyz(R.nz_rows,:);
+
+    idx = find(strcmp(xyzlab,{R.coords.label}));
+    xyz = R.coords(idx).xyz;
+    if ~isempty(valuefield) && isfield(R, valuefield)
+      values = R.(valuefield);
+      values = values(values~=0);
+      if size(xyz,1) == numel(values)
+        dlmwrite(fpath, [xyz,values(:)], ' ');
+      end
     else
-      nb = numel(R.nz_rows) - 1;
-      xyzb = xyz(R.nz_rows(1:nb),:);
+      dlmwrite(fpath, xyz, ' ');
     end
-    dlmwrite(fpath, xyzb, ' ');
   end
   fprintf('Done.\n');
 end
