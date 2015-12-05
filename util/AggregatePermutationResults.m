@@ -33,7 +33,7 @@ function PR = AggregatePermutationResults(results, varargin)
       if nchar > 0
         fprintf(repmat('\b',1,nchar));
       end
-      nchar = fprintf('%6d');
+      nchar = fprintf('%6d', ii);
       j = idx(ii);
       if BiasUnit
         Uz = results(j).Uz(1:(end-1),:);

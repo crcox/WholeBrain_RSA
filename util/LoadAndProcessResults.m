@@ -80,6 +80,7 @@ function [results, params, varargout] = LoadAndProcessResults(resultsdir, csvfil
     results_perm = PairWithCoordinates(results_perm, metadata, coords, opts.coordslabel);
     varargout{1} = results_perm;
 
+    warning('off','MATLAB:MKDIR:DirectoryExists');
     mkdir(mridir)
     mkdir(fullfile(mridir,'count'))
     mkdir(fullfile(mridir,'count','txt'));
@@ -89,6 +90,7 @@ function [results, params, varargout] = LoadAndProcessResults(resultsdir, csvfil
     mkdir(fullfile(mridir,'nodestrength','txt'));
     mkdir(fullfile(mridir,'nodestrength','csv'));
     mkdir(fullfile(mridir,'nodestrength','figures'));
+    warning('on','MATLAB:MKDIR:DirectoryExists');
     WriteVoxels(fullfile(mridir,'count','txt'), results_perm, 'CoordsLabel', opts.coordslabel, 'VoxelValue', 'count_nz_rows');
     WriteVoxels(fullfile(mridir,'nodestrength','txt'), results_perm, 'CoordsLabel', opts.coordslabel, 'VoxelValue', 'mean_nodestrength');
   else
@@ -96,9 +98,11 @@ function [results, params, varargout] = LoadAndProcessResults(resultsdir, csvfil
     results = PairWithCoordinates(results, metadata, coords, opts.coordslabel);
 
     % Write voxel data to text
+    warning('off','MATLAB:MKDIR:DirectoryExists');
     mkdir(mridir)
     mkdir(fullfile(mridir,'txt'));
     mkdir(fullfile(mridir,'csv'));
     mkdir(fullfile(mridir,'figures'));
+    warning('on','MATLAB:MKDIR:DirectoryExists');
     WriteVoxels(fullfile(mridir,'txt'), results, 'CoordsLabel', opts.coordslabel);
 end
