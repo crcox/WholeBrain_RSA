@@ -42,6 +42,7 @@ function [results, params, varargout] = LoadAndProcessResults(resultsdir, csvfil
   % Generate filenames
   [p,f,e] = fileparts(csvfilename);
   matfilename = fullfile(p,strcat(f,'.mat'));
+  permfilename = fullfile(p,strcat(f,'_aggregated.mat'));
 
   if exist(matfilename, 'file')
     load(matfilename, 'results','params');
@@ -68,13 +69,11 @@ function [results, params, varargout] = LoadAndProcessResults(resultsdir, csvfil
 
   % Aggregate over permutations
   if PermTest
-    if exist(matfilename, 'file')
-      results = struct();
-      params = struct();
-      load(matfilename, 'results_perm');
+    if exist(permfilename, 'file')
+      load(permfilename, 'results_perm');
     else
       results_perm = AggregatePermutationResults(results);
-      save(matfilename, 'results_perm');
+      save(permfilename, 'results_perm');
     end
 
     % Pair coordinates with discovered voxels

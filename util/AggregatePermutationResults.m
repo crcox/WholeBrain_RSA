@@ -10,8 +10,10 @@ function PR = AggregatePermutationResults(results, varargin)
   N = numel(subject);
   PR(N) = init_results('Template','permtest');
   permfields = fieldnames(PR);
+  fprintf('*** Aggregating Permutation Results ***\n')
   for i = 1:N
     s = subject(i);
+    fprintf('Subject %3d: ', s);
     idx = find(ss==s);
     BiasUnit = results(idx(1)).bias;
 
@@ -26,7 +28,12 @@ function PR = AggregatePermutationResults(results, varargin)
     % Compute and aggregate node strengths
     nodestrength = zeros(1, numel(nnzr));
     nzv = 0;
+    nchar = 0;
     for ii = 1:numel(idx);
+      if nchar > 0
+        fprintf(repmat('\b',1,nchar));
+      end
+      nchar = fprintf('%6d');
       j = idx(ii);
       if BiasUnit
         Uz = results(j).Uz(1:(end-1),:);
@@ -39,6 +46,7 @@ function PR = AggregatePermutationResults(results, varargin)
       nzv = nzv + nnz(z);
       nodestrength(z) = nodestrength(z) + sum(abs(Uz * Uz'));
     end
+    fprintf('\n');
     nodestrength = nodestrength / numel(idx);
     nzv = nzv / numel(idx);
 
