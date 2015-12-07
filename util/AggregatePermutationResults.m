@@ -26,8 +26,8 @@ function PR = AggregatePermutationResults(results, varargin)
     end
 
     % Compute and aggregate node strengths
-    nodestrength = zeros(1, numel(nnzr));
-    nzv = 0;
+    nodestrength = zeros(numel(idx), numel(nnzr));
+    nzv = zeros(numel(idx),1);
     nchar = 0;
     for ii = 1:numel(idx);
       if nchar > 0
@@ -43,12 +43,12 @@ function PR = AggregatePermutationResults(results, varargin)
         z = results(j).nz_rows;
       end
       Uz = Uz(z,:);
-      nzv = nzv + nnz(z);
-      nodestrength(z) = nodestrength(z) + sum(abs(Uz * Uz'));
+      nzv(ii) = nnz(z);
+      nodestrength(ii, z) = sum(abs(Uz * Uz'));
     end
     fprintf('\n');
-    nodestrength = nodestrength / numel(idx);
-    nzv = nzv / numel(idx);
+    mean_nodestrength = mean(nodestrength);
+    mean_nzv = mean(nzv);
 
     for ii = 1:numel(permfields);
       f = permfields{ii};
@@ -62,7 +62,9 @@ function PR = AggregatePermutationResults(results, varargin)
     else
       PR(i).nz_rows = nnzr>0;
     end
-    PR(i).mean_nodestrength = nodestrength;
-    PR(i).mean_nzv = nzv;
+    PR(i).nodestrength = nodestrength;
+    PR(i).mean_nodestrength = mean_nodestrength;
+    PR(i).nzv = nzv;
+    PR(i).mean_nzv = mean_nzv;
   end
 end

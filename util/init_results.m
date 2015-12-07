@@ -35,9 +35,11 @@ function results = init_results(varargin)
     results.job = [];
 
   case 'permtest'
+    results.nodestrength = [];
     results.mean_nodestrength = [];
     results.count_nz_rows = [];
     results.nz_rows= [];
+    results.nzv = [];
     results.mean_nzv = [];
     results.subject = [];
     results.cvholdout = [];

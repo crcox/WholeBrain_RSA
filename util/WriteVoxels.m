@@ -31,9 +31,15 @@ function WriteVoxels(outdir,results,varargin)
     xyz = R.coords(idx).xyz;
     if ~isempty(valuefield) && isfield(R, valuefield)
       values = R.(valuefield);
-      values = values(values~=0);
+      if isnumeric(values)
+        values = values(values~=0);
+      end
       if size(xyz,1) == numel(values)
-        dlmwrite(fpath, [xyz,values(:)], ' ');
+        if islogical(values)
+          dlmwrite(fpath, xyz(values,:), ' ');
+        else
+          dlmwrite(fpath, [xyz,values(:)], ' ');
+        end
       end
     else
       dlmwrite(fpath, xyz, ' ');
