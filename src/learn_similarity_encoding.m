@@ -26,7 +26,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   holdout   = p.Results.cvholdout;
   normalize = p.Results.normalize;
   LambdaSeq = p.Results.LambdaSeq;
-  PermutationTest = p.Results.PermutationTest
+  PermutationTest = p.Results.PermutationTest;
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
@@ -207,7 +207,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         % W  : A matrix of weights.
         % S  : The true similarity matrix.
         % Sz : The predicted similarity matrix.
-        % C  : Essentially the first r principle components of S.
+        % C  : The square root of S, truncated to the first r columns (low rank assumption)
         % Cz : The predicted C.
         % St : The approximated S, reconstructed from actual C.
         % Uz : The estimated voxel weights, with a r weights per voxel.

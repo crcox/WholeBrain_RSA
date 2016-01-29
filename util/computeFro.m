@@ -48,7 +48,7 @@ function R = computeFro(results,params,varargin)
       finalfilter(z) = tmp.finalfilter; % In fact, this should not be necessary, but it's ``wrong'' in the main code.
       test(z) = tmp.cvfilter;
       train = ~test & ~finalfilter & z;
-      
+
 %       train = ~tmp.cvfilter & ~tmp.finalfilter;
       [Ctmp,r] = sqrt_truncate_r(S(~finalfilter,~finalfilter), t);
       C = nan(length(z), r);

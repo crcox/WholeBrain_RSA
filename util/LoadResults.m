@@ -1,11 +1,11 @@
 function [results, params] = LoadResults(varargin)
   p = inputParser();
   addParameter(p,'ResultDir','.',@ischar);
-  addParameter(p,'DataDir','~/MCW/WholeBrain_RSA/data/avg',@ischar)
-  addParameter(p,'MetadataFile','metadata.mat',@ischar)
+  addParameter(p,'DataDir','~/data/Manchester/WholeBrain_RSA/data/avg',@ischar)
+  addParameter(p,'MetadataFile','metadata_avg.mat',@ischar)
   addParameter(p,'MetadataVarname','metadata',@ischar)
-  addParameter(p,'ResultFile','',@ischar);
-  addParameter(p,'ParamFile','',@ischar);
+  addParameter(p,'ResultFile','results.mat',@ischar);
+  addParameter(p,'ParamFile','params.json',@ischar);
   addParameter(p,'SortJobs',false,@islogical)
   addParameter(p,'SkipFields',[])
   parse(p,varargin{:});

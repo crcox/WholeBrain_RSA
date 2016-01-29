@@ -1,4 +1,4 @@
-function PR = AggregatePermutationResults(results, varargin)
+function results = computNodestrength(results, varargin)
   p = inputParser();
   addRequired(p,'results', @isstruct);
   addParameter(p,'scale', true, @islogical);
@@ -10,8 +10,8 @@ function PR = AggregatePermutationResults(results, varargin)
   ss = [results.subject];
   subject = unique(ss);
   N = numel(subject);
-  PR(N) = init_results('Template','permtest');
-  permfields = fieldnames(PR);
+  NS(N) = init_results('Template','default');
+  permfields = fieldnames(NS);
   fprintf('*** Aggregating Permutation Results ***\n')
   for i = 1:N
     s = subject(i);
@@ -60,18 +60,18 @@ function PR = AggregatePermutationResults(results, varargin)
     for ii = 1:numel(permfields);
       f = permfields{ii};
       if isfield(results, f)
-        PR(i).(f) = results(idx(1)).(f);
+        NS(i).(f) = results(idx(1)).(f);
       end
     end
-    PR(i).count_nz_rows = nnzr;
+    NS(i).count_nz_rows = nnzr;
     if BiasUnit
-      PR(i).nz_rows = [nnzr>0;true];
+      NS(i).nz_rows = [nnzr>0;true];
     else
-      PR(i).nz_rows = nnzr>0;
+      NS(i).nz_rows = nnzr>0;
     end
-    PR(i).nodestrength = nodestrength;
-    PR(i).mean_nodestrength = mean_nodestrength;
-    PR(i).nzv = nzv;
-    PR(i).mean_nzv = mean_nzv;
+    NS(i).nodestrength = nodestrength;
+    NS(i).mean_nodestrength = mean_nodestrength;
+    NS(i).nzv = nzv;
+    NS(i).mean_nzv = mean_nzv;
   end
 end

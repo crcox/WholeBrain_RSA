@@ -12,6 +12,7 @@ function [sigvox] = ThresholdNodestrength(nodestrength, empiricalnullvals, varar
   alpha = lower(p.Results.alpha);
 
   n = numel(nodestrength);
+  %n = nnz(nodestrength);
   switch method
   case 'fdr'
     % Threshold the voxel with the largest node strength by (1*alpha)/n, the
@@ -36,6 +37,7 @@ function [sigvox] = ThresholdNodestrength(nodestrength, empiricalnullvals, varar
   case 'bonferroni'
     % Threshold all voxels by alpha/n.
     alpha_bonf = alpha / n;
+    disp(alpha_bonf);
     thresh = quantile(empiricalnullvals, 1-alpha_bonf);
     sigvox = nodestrength(:) > thresh(:);
 
