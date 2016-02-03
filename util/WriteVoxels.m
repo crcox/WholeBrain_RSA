@@ -1,4 +1,4 @@
-function WriteVoxels(outdir,results,varargin)
+    function WriteVoxels(outdir,results,varargin)
 % This function will write out a single directory worth of data, where a
 % directory will include all cross validation instances for all subjects for a
 % particular configuration of parameters.
