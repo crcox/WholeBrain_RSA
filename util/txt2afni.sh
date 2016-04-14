@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-mnimaster="/home/chris/Manchester/CommonBrains/MNI_EPI_funcRes.nii"
+mnimaster="/home/chris/MRI/Manchester/data/CommonBrains/MNI_EPI_funcRes.nii"
 
 for INFILE in "$@"
 do

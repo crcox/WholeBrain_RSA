@@ -1,15 +1,13 @@
-function WriteTable(filename,results,params,varargin)
+function WriteTable(filename,results,varargin)
   p = inputParser();
   addRequired(p, 'filename');
   addRequired(p, 'results');
-  addRequired(p, 'params');
   addParameter(p, 'fields',{})
   addParameter(p, 'overwrite', false);
-  parse(p, filename, results, params, varargin{:});
+  parse(p, filename, results, varargin{:});
 
   filename  = p.Results.filename;
   results   = p.Results.results;
-  params    = p.Results.params;
   fields    = p.Results.fields;
   OVERWRITE = p.Results.overwrite;
 
@@ -38,6 +36,8 @@ function WriteTable(filename,results,params,varargin)
     'tau'          , '%.4f' , ...
     'normalize'    , '%s'   , ...
     'bias'         , '%d'   , ...
+    'RandomSeed'   , '%d'   , ...
+    'nVoxel'       , '%d'   , ...
     'p1'           , '%.4f' , ...
     'p2'           , '%.4f' , ...
     'cor1'         , '%.4f' , ...

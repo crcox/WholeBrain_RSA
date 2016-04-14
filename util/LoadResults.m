@@ -92,7 +92,7 @@ function [results, params] = LoadResults(varargin)
     if ~isempty(SKIP)
       R = rmfield(R, SKIP);
     end
-    if ~isfield(results, 'data_varname')
+    if ~isfield(results, 'data_varname') && isfield(R,'data_varname')
       [results.data_varname] = deal([]);
     end
     if ~isfield(results, 'filters')
