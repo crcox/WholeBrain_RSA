@@ -264,6 +264,42 @@ function WholeBrain_RSA(varargin)
                       'PermutationTest', PermutationTest, ...
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
+
+  case 'searchlight'
+    X = uncell(X);
+    Y = uncell(Y)+1;
+    cvind = uncell(cvind);
+    colfilter = uncell(colfilter);
+
+    % create a 3D binary mask
+    z = strcmp({metadata.coords.orientation}, orientation);
+    xyz = metadata.coords(z).xyz(colfilter,:);
+    [mask,dxyz] = coordsTo3dMask(xyz);
+
+    % Translate slradius (in mm) to sl voxels
+    % N.B. Because voxels need not be symmetric cubes, but Seachmight will
+    % generate symmetric spheres from a single radius parameter, we need to
+    % select one value of the three that will be produced in this step. I am
+    % arbitrarily choosing the max, to err on the side of being inclusive.
+    slradius_ijk = max(round(slradius ./ dxyz));
+
+    % create the "meta" neighbourhood structure
+    meta = createMetaFromMask(mask, slradius_ijk);
+
+    % Prepare parameters
+    classifier = 'gnb_searchmight';
+    if strcmp(slTestToUse,'accuracyOneSided_permutation')
+      TestToUseCfg = {'testToUse',slTestToUse,slpermutations};
+    else
+      TestToUseCfg = {'testToUse',slTestToUse};
+    end
+    [am,pm,hm,fm] = computeInformationMap(X,Y,cvind,classifier,'searchlight', ...
+                                meta.voxelsToNeighbours,meta.numberOfNeighbours,TestToUseCfg{:});
+
+    results.accuracy_map = am;
+    results.hitrate_map = hm;
+    results.falsealarm_map = fm;
+    results.pvalue_map = pm;
   end
 
   fprintf('Saving stuff.....\n');
