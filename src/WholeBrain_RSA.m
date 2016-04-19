@@ -9,8 +9,8 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'Gtype'            , []        , @ischar        );
   addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
-  addParameter(p , 'simfile'          , []        , @ischar        );
-  addParameter(p , 'sim_varname'      , []        , @ischar        );
+  addParameter(p , 'sim_source'       , []        , @ischar        );
+  addParameter(p , 'sim_metric'       , []        , @ischar        );
   addParameter(p , 'filters'          , []                         );
   addParameter(p , 'data'             , []                         );
   addParameter(p , 'metadata'         , []        , @ischar        );
@@ -95,35 +95,9 @@ function WholeBrain_RSA(varargin)
     end
   end
 
-  if iscell(datafile)
-    if length(datafile) == 1
-      datafile = datafile{1};
-    end
-  end
-  if iscell(metafile)
-    if length(metafile) == 1
-      metafile = metafile{1};
-    end
-  end
-
-  % This is hack that made it a little easier to debug things locally.
-  switch environment
-  case 'condor'
-    root = './';
-    datadir = root;
-    matfilename = 'results.mat';
-    infofilename = 'info.mat';
-  case 'chris'
-    root = './';
-    datadir = fullfile(root,'data');
-    matfilename = 'results.mat';
-    infofilename = 'info.mat';
-
-  otherwise
-    error('Environment %s not implemented.', environment);
-
-  end
-  % End hack
+  % If cell array with one element, unpack element from cell.
+  datafile = uncell(datafile);
+  metafile = uncell(metafile);
 
   % I use this "StagingContainer" idiom to have tight control over variable
   % names in the workspace.
@@ -142,43 +116,18 @@ function WholeBrain_RSA(varargin)
   X = StagingContainer.(data_varname);
   fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
-  if isempty(filter_labels)
-    rowfilter = true(1,size(X,1));
-    colfilter = true(1,size(X,2));
-  else
-    if ~iscell(filter_labels);
-      filter_labels = {filter_labels};
+  %% Compile filters
+  rowfilter  = cell(N,1);
+  colfilter  = cell(N,1);
+  for i = 1:N
+    if isempty(filter_labels)
+      rowfilter{i} = true(1,n(i));
+      colfilter{i} = true(1,d(i));
+    else
+      [rowfilter{i},colfilter{i}] = composeFilters(metadata(i).filters, filter_labels);
     end
-
-    % metadata.filter points to a structured array of filters.
-    % First, force filters to a common orientation.
-    for i = 1:numel(metadata.filter)
-      metadata.filter(i).filter = forceRowVec(metadata.filter(i).filter);
-    end
-
-    % Then select the filters
-    z = false(1,numel(metadata.filter));
-    for f = filter_labels;
-      z(strcmp(f, {metadata.filter.label})) = true;
-    end
-    z = z & strcmp(data_varname, {metadata.filter.subset});
-
-    filters.row = metadata.filter(z & [metadata.filter.dimension]==1);
-    filters.col = metadata.filter(z & [metadata.filter.dimension]==2);
-    rowfilter = all(cat(1, filters.row.filter),1);
-    colfilter = all(cat(1, filters.col.filter),1);
-    clear filters;
   end
 
-  % I used to remove outliers within the code. Now, I do it ahead of time and
-  % store the filters in metadata.filter.
-
-%   allzero = any(X); % Identify columns with data
-%   [~, reduxFilter] = removeOutliers(X);
-%   % Note: reduxFilter field names are reversed...
-%   filter = filter & reduxFilter.words';
-%   vox = allzero & reduxFilter.voxels;
-  X = X(rowfilter, colfilter);
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
   % Include voxel for bias
@@ -197,22 +146,17 @@ function WholeBrain_RSA(varargin)
     msg = 'YES';
   end
   fprintf('[%3s]\n', msg);
-
+  
+  %% Load CV indexes, and identify the final holdout set.
+  % N.B. the final holdout set is excluded from the rowfilter.
   cvpath = fullfile(datadir,cvfile);
   StagingContainer = load(cvpath, cv_varname);
   CV = StagingContainer.(cv_varname);
-%   outlying_words = reduxFilter.words(filter);
+
   cvind = CV(rowfilter, cvscheme);
   finalholdout = cvind == finalholdoutInd;
   X(finalholdout,:) = [];
   cvind(finalholdout) = [];
-  if finalholdoutInd > 0
-    cvind(cvind>finalholdoutInd) = cvind(cvind>finalholdoutInd) - 1;
-    % Adjust the cv holdout index(es) down if they are higher than the final holdout.
-    if ~isempty(cvholdout)
-      cvholdout(cvholdout>finalholdoutInd) = cvholdout(cvholdout>finalholdoutInd) - 1;
-    end
-  end
 
   %% ----------------Visual, Audio or Semantic similarities and processing----------------
   simpath = fullfile(datadir,simfile);
@@ -314,7 +258,18 @@ function WholeBrain_RSA(varargin)
     cvholdout = mat2cell(cvholdout(:),ones(numel(cvholdout),1));
     [results.cvholdout] = deal(cvholdout{:});
   end
-  save(matfilename,'results');
+  %% Save results
+  rinfo = whos('results');
+  switch SaveResultsAs
+      case 'mat'
+          if rinfo.bytes > 2e+9
+            save('results.mat','results','-v7.3');
+          else
+            save('results.mat','results');
+          end
+      case 'json'
+          savejson('',results,'FileName','results.json','ForceRootName',false);
+  end
   save(infofilename,'-struct','info');
 
   fprintf('Done!\n');
