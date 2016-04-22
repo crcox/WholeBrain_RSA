@@ -6,29 +6,36 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'RandomSeed'       , 0                          );
   addParameter(p , 'PermutationTest'  , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
-  addParameter(p , 'Gtype'            , []        , @ischar        );
+  addParameter(p , 'regularization'   , []        , @ischar        );
   addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
+  addParameter(p , 'target'           , []        , @ischar        );
   addParameter(p , 'sim_source'       , []        , @ischar        );
   addParameter(p , 'sim_metric'       , []        , @ischar        );
   addParameter(p , 'filters'          , []                         );
   addParameter(p , 'data'             , []                         );
-  addParameter(p , 'metadata'         , []        , @ischar        );
   addParameter(p , 'data_varname'     , []                         );
+  addParameter(p , 'metadata'         , []        , @ischar        );
   addParameter(p , 'metadata_varname' , []        , @ischar        );
-  addParameter(p , 'cvfile'           , []        , @ischar        );
-  addParameter(p , 'cv_varname'       , []        , @ischar        );
+  addParameter(p , 'finalholdout'     , 0         , @isintegerlike );
   addParameter(p , 'cvscheme'         , []        , @isnumeric     );
   addParameter(p , 'cvholdout'        , []        , @isnumeric     );
-  addParameter(p , 'finalholdout'     , 0         , @isintegerlike );
+  addParameter(p , 'orientation'      , []        , @ischar        );
   addParameter(p , 'tau'              , 0.2       , @isnumeric     );
   addParameter(p , 'lambda'           , []        , @isnumeric     );
   addParameter(p , 'lambda1'          , []        , @isnumeric     );
   addParameter(p , 'LambdaSeq'        , []        , @ischar        );
   addParameter(p , 'AdlasOpts'        , struct()  , @isstruct      );
-  addParameter(p , 'environment'      , 'condor'  , @ischar        );
   addParameter(p , 'SanityCheckData'  , []        , @ischar        );
   addParameter(p , 'SanityCheckModel' , []        , @ischar        );
+  addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON);
+  % --- searchlight specific --- %
+  addParameter(p , 'slShape'          , []        , @ischar        );
+  addParameter(p , 'slSim_measure'    , []        , @ischar        );
+  addParameter(p , 'slRadius'         , []        , @isnumeric     );
+  addParameter(p , 'slTestToUse'      , 'accuracyOneSided_analytical', @ischar);
+  addParameter(p , 'slPermutationType', []        , @ischar        );
+  addParameter(p , 'slPermutations'   , 0         , @isscalar      );
   % Parameters below this line are unused in the analysis, may exist in the
   % parameter file because other progams use them.
   addParameter(p , 'COPY'             , []                         );
@@ -53,34 +60,41 @@ function WholeBrain_RSA(varargin)
   PermutationTest  = p.Results.PermutationTest;
   SmallFootprint   = p.Results.SmallFootprint;
   RandomSeed       = p.Results.RandomSeed;
-  Gtype            = p.Results.Gtype;
+  regularization   = p.Results.regularization;
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
-  simfile          = p.Results.simfile;
-  sim_varname      = p.Results.sim_varname;
+  target_label     = p.Results.target;
+  sim_source       = p.Results.sim_source;
+  sim_metric       = p.Results.sim_metric;
   filter_labels    = p.Results.filters;
   datafile         = p.Results.data;
   data_varname     = p.Results.data_varname;
-  cvfile           = p.Results.cvfile;
-  cv_varname       = p.Results.cv_varname;
   cvscheme         = p.Results.cvscheme;
   cvholdout        = p.Results.cvholdout;
   finalholdoutInd  = p.Results.finalholdout;
+  orientation      = p.Results.orientation;
   metafile         = p.Results.metadata;
-  meta_varname     = p.Results.metadata_varname;
+  metadata_varname = p.Results.metadata_varname;
   tau              = p.Results.tau;
   lambda           = p.Results.lambda;
   lambda1          = p.Results.lambda1;
   LambdaSeq        = p.Results.LambdaSeq;
   opts             = p.Results.AdlasOpts;
-  environment      = p.Results.environment;
   SanityCheckData  = p.Results.SanityCheckData;
   SanityCheckModel = p.Results.SanityCheckModel;
+  SaveResultsAs    = p.Results.SaveResultsAs;
+  % --- searchlight specific --- %
+  slSim_measure = p.Results.slSim_measure;
+  slTestToUse = p.Results.slTestToUse;
+  slPermutationType = p.Results.slPermutationType;
+  slPermutationCount = p.Results.slPermutations;
+  slShape = p.Results.slShape;
+  slRadius = p.Results.slRadius;
 
   rng(RandomSeed);
 
-  % Check that the correct parameters are passed, given the desired algorithm
-  [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq);
+  % Check that the correct parameters are passed, given the desired regularization
+  [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
 
   % If values originated in a YAML file, and scientific notation is used, the
   % value may have been parsed as a string. Check and correct.
@@ -99,22 +113,12 @@ function WholeBrain_RSA(varargin)
   datafile = uncell(datafile);
   metafile = uncell(metafile);
 
-  % I use this "StagingContainer" idiom to have tight control over variable
-  % names in the workspace.
-  StagingContainer = load(fullfile(datadir,metafile), meta_varname);
-  metadata = StagingContainer.(meta_varname);
-  [~,fname,~] = fileparts(datafile);
-  subjid = sscanf(fname, 's%d');
-  if ~isempty(subjid)
-    subject = find(subjid == [metadata.subject]);
-  end
-  metadata = metadata(subject);
-
-  datapath = fullfile(datadir,datafile);
-  fprintf('Loading data from  %s, subject number %d\n', datapath, subject);
-  StagingContainer = load(datapath, data_varname);
-  X = StagingContainer.(data_varname);
-  fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
+  %% Load metadata
+  StagingContainer = load(metafile, metadata_varname);
+  metadata = StagingContainer.(metadata_varname); clear StagingContainer;
+  N = length(metadata);
+  n = [metadata.nrow];
+  d = [metadata.ncol];
 
   %% Compile filters
   rowfilter  = cell(N,1);
@@ -128,9 +132,36 @@ function WholeBrain_RSA(varargin)
     end
   end
 
+  %% Load CV indexes, and identify the final holdout set.
+  % N.B. the final holdout set is excluded from the rowfilter.
+  cvind = cell(1,N);
+  for i = 1:N
+    % Add the final holdout set to the rowfilter, so we don't even load
+    % those data.
+    cvind{i} = metadata(i).cvind(:,cvscheme);
+    finalholdout = cvind{i} == finalholdoutInd;
+    rowfilter{i} = forceRowVec(rowfilter{i}) & forceRowVec(~finalholdout);
+    % Remove the final holdout set from the cvind, to match.
+    cvind{i} = cvind{i}(rowfilter{i});
+  end
+
+  %% Select targets
+  S = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
+  S = S{1};
+
+  %% Load data
+  [X,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata);
+  X = X{1};
+  metadata   = metadata(subjix);
+  rowfilter  = rowfilter{subjix};
+  colfilter  = colfilter{subjix};
+  cvind      = cvind{subjix};
+  fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
+
+
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
-  % Include voxel for bias
+  %% Include voxel for bias
   fprintf('%-28s', 'Including Bias Unit:');
   msg = 'NO';
   if BIAS
@@ -139,39 +170,21 @@ function WholeBrain_RSA(varargin)
   end
   fprintf('[%3s]\n', msg);
 
-  % Normalize columns of X
+  %% Normalize columns of X
+  % NB The normalization happens later.
   fprintf('%-28s', 'Normalizing columns of X:');
   msg = 'NO';
   if normalize
     msg = 'YES';
   end
   fprintf('[%3s]\n', msg);
-  
-  %% Load CV indexes, and identify the final holdout set.
-  % N.B. the final holdout set is excluded from the rowfilter.
-  cvpath = fullfile(datadir,cvfile);
-  StagingContainer = load(cvpath, cv_varname);
-  CV = StagingContainer.(cv_varname);
-
-  cvind = CV(rowfilter, cvscheme);
-  finalholdout = cvind == finalholdoutInd;
-  X(finalholdout,:) = [];
-  cvind(finalholdout) = [];
-
-  %% ----------------Visual, Audio or Semantic similarities and processing----------------
-  simpath = fullfile(datadir,simfile);
-  StagingContainer = load(simpath, sim_varname);
-  S = StagingContainer.(sim_varname);
-
-  S = S(rowfilter,rowfilter); clear allSimStructs;
-  S = S(~finalholdout, ~finalholdout);
 
   fprintf('Data loaded and processed.\n');
 
-  %% ---------------------Setting algorithm parameters-------------------------
-  switch Gtype
+  %% ---------------------Setting regularization parameters-------------------------
+  switch upper(regularization)
   case 'L1L2'
-    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+    [results,info] = learn_similarity_encoding(S, X, regularization, ...
                       'tau'            , tau            , ...
                       'lambda1'        , lambda1        , ...
                       'cvind'          , cvind          , ...
@@ -182,8 +195,8 @@ function WholeBrain_RSA(varargin)
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
 
-  case 'grOWL'
-    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+  case 'GROWL'
+    [results,info] = learn_similarity_encoding(S, X, regularization, ...
                       'tau'            , tau            , ...
                       'lambda'         , lambda         , ...
                       'LambdaSeq'      , LambdaSeq      , ...
@@ -195,8 +208,8 @@ function WholeBrain_RSA(varargin)
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
 
-  case 'grOWL2'
-    [results,info] = learn_similarity_encoding(S, X, Gtype, ...
+  case 'GROWL2'
+    [results,info] = learn_similarity_encoding(S, X, regularization, ...
                       'tau'            , tau            , ...
                       'lambda'         , lambda         , ...
                       'lambda1'        , lambda1        , ...
@@ -209,9 +222,9 @@ function WholeBrain_RSA(varargin)
                       'SmallFootprint' , SmallFootprint , ...
                       'AdlasOpts'      , opts); %#ok<ASGLU>
 
-  case 'searchlight'
+  case 'SEARCHLIGHT'
     X = uncell(X);
-    Y = uncell(Y)+1;
+    S = uncell(S)+1;
     cvind = uncell(cvind);
     colfilter = uncell(colfilter);
 
@@ -225,60 +238,154 @@ function WholeBrain_RSA(varargin)
     % generate symmetric spheres from a single radius parameter, we need to
     % select one value of the three that will be produced in this step. I am
     % arbitrarily choosing the max, to err on the side of being inclusive.
-    slradius_ijk = max(round(slradius ./ dxyz));
+    slradius_ijk = max(round(slRadius ./ dxyz));
 
     % create the "meta" neighbourhood structure
     meta = createMetaFromMask(mask, slradius_ijk);
+    labels = metadata.itemindex;
+    labelsRun = metadata.runindex;
 
-    % Prepare parameters
-    classifier = 'gnb_searchmight';
-    if strcmp(slTestToUse,'accuracyOneSided_permutation')
-      TestToUseCfg = {'testToUse',slTestToUse,slpermutations};
+    results.similarity_measure = slSim_Measure;
+    if strcmpi('nrsa',slSim_Measure)
+      % Define results structure
+      results.Uz = [];
+      results.Cz = [];
+      results.Sz = [];
+      results.nz_rows =  [];
+      results.target_label = target_label;
+      results.subject =  [];
+      results.cvholdout = [];
+      results.finalholdout = [];
+      results.lambda = [];
+      results.lambda1 = [];
+      results.LambdaSeq = [];
+      results.regularization = [];
+      results.bias = [];
+      results.normalize = [];
+      results.nzv = [];
+%      results.p1      =  [];
+%      results.p2      =  [];
+%      results.cor1    =  [];
+%      results.cor2    =  [];
+%      results.p1t     =  [];
+%      results.p2t     =  [];
+%      results.cor1t   =  [];
+%      results.cor2t   =  [];
+      results.structureScoreMap = zeros(1, size(meta.voxelsToNeighbours,1));
+      results.structurePvalueMap = zeros(1, size(meta.voxelsToNeighbours,1));
+      results.err1    =  zeros(1, size(meta.voxelsToNeighbours,1));
+      results.err2    =  zeros(1, size(meta.voxelsToNeighbours,1));
+      results.iter    =  [];
+
+      % Preallocate
+      results(numel(cvset)*nlam1*nlam).Uz = [];
+
+      for iVolume = 1:size(meta.voxelsToNeighbours,1)
+        sl = meta.voxelsToNeighbours(iVolume,1:meta.numberOfNeighbors(iVolume));
+        switch upper(regularization)
+        case 'L1L2'
+          [tmpr,info] = learn_similarity_encoding(S, X(:,sl), regularization, ...
+                            'tau'            , tau            , ...
+                            'lambda1'        , lambda1        , ...
+                            'cvind'          , cvind          , ...
+                            'cvholdout'      , cvholdout      , ...
+                            'normalize'      , normalize      , ...
+                            'DEBUG'          , DEBUG          , ...
+                            'PermutationTest', PermutationTest, ...
+                            'SmallFootprint' , SmallFootprint , ...
+                            'Results'        , results        , ...
+                            'AdlasOpts'      , opts); %#ok<ASGLU>
+
+        case 'GROWL'
+          [tmpr,info] = learn_similarity_encoding(S, X(:,sl), regularization, ...
+                            'tau'            , tau            , ...
+                            'lambda'         , lambda         , ...
+                            'LambdaSeq'      , LambdaSeq      , ...
+                            'cvind'          , cvind          , ...
+                            'cvholdout'      , cvholdout      , ...
+                            'normalize'      , normalize      , ...
+                            'DEBUG'          , DEBUG          , ...
+                            'PermutationTest', PermutationTest, ...
+                            'SmallFootprint' , SmallFootprint , ...
+                            'AdlasOpts'      , opts); %#ok<ASGLU>
+
+        case 'GROWL2'
+          [tmpr,info] = learn_similarity_encoding(S, X(:,sl), regularization, ...
+                            'tau'            , tau            , ...
+                            'lambda'         , lambda         , ...
+                            'lambda1'        , lambda1        , ...
+                            'LambdaSeq'      , LambdaSeq      , ...
+                            'cvind'          , cvind          , ...
+                            'cvholdout'      , cvholdout      , ...
+                            'normalize'      , normalize      , ...
+                            'DEBUG'          , DEBUG          , ...
+                            'PermutationTest', PermutationTest, ...
+                            'SmallFootprint' , SmallFootprint , ...
+                            'AdlasOpts'      , opts); %#ok<ASGLU>
+        end
+        for iResult = 1:numel(tmpr)
+          results(iResult).err1(iVolume) = tmpr(iResult).err1;
+          results(iResult).err2(iVolume) = tmpr(iResult).err2;
+          results(iResult).structureScoreMap(iVolume) = tmpr(iResult).structureScoreMap;
+        end
+      end
     else
-      TestToUseCfg = {'testToUse',slTestToUse};
-    end
-    [am,pm,hm,fm] = computeInformationMap(X,Y,cvind,classifier,'searchlight', ...
-                                meta.voxelsToNeighbours,meta.numberOfNeighbours,TestToUseCfg{:});
+      [structureScoreMap,structurePvalueMap] = computeSimilarityStructureMap(...
+        slSim_Measure,...
+        X,labels,...
+        X,labels,...
+        'meta',meta,'similarityStructure',S,...
+        'permutationTest',slPermutationType,nPermutationCount,...
+        'groupLabels',labelsRun,labelsRun);
 
-    results.accuracy_map = am;
-    results.hitrate_map = hm;
-    results.falsealarm_map = fm;
-    results.pvalue_map = pm;
+      results.structureScoreMap = structureScoreMap;
+      results.pvalue_map = structurePvalueMap;
+    end
   end
 
   fprintf('Saving stuff.....\n');
 
   [results.subject] = deal(subjid);
   [results.finalholdout] = deal(finalholdoutInd);
-  % Adjust the cvholdout indexes to accomodate the final holdout index.
-  if isfield(results,'cvholdout')
-    cvholdout = [results.cvholdout];
-    z = cvholdout >= finalholdoutInd;
-    cvholdout(z) = cvholdout(z) + 1;
-    cvholdout = mat2cell(cvholdout(:),ones(numel(cvholdout),1));
-    [results.cvholdout] = deal(cvholdout{:});
-  end
+
   %% Save results
   rinfo = whos('results');
   switch SaveResultsAs
       case 'mat'
-          if rinfo.bytes > 2e+9
+          if rinfo.bytes > 2e+9 % 2 GB
             save('results.mat','results','-v7.3');
           else
             save('results.mat','results');
           end
       case 'json'
-          savejson('',results,'FileName','results.json','ForceRootName',false);
+          if rinfo.bytes > 16e+6 % 16 MB
+            disp('WARNING: Results structure too large to save as JSON (excedes MongoDB 16MB limit). Saving as .mat...')
+            if rinfo.bytes > 2e+9 % 2 GB
+              save('results.mat','results','-v7.3');
+            else
+              save('results.mat','results');
+            end
+          else
+            savejson('',results,'FileName','results.json','ForceRootName',false);
+          end
   end
   save(infofilename,'-struct','info');
 
   fprintf('Done!\n');
 end
 
-function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaSeq)
-% Each algorithm requires different lambda configurations. This private
+function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq)
+% Each regularization requires different lambda configurations. This private
 % function ensures that everything has been properly specified.
-  switch Gtype
+  switch upper(regularization)
+  case 'NONE'
+    if ~isempty(lambda) || ~isempty(lambda1)
+      warning('Regularization was set to none, but lambda values were provided. They will be ignored.')
+    end
+    lam    = [];
+    lam1   = [];
+    lamSeq = [];
+
   case 'L1L2'
     if ~isempty(lambda)
       warning('Group Lasso does not use the lambda parameter. It is being ignored.');
@@ -288,7 +395,7 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaS
     lam1   = lambda1;
     lamSeq = [];
 
-  case 'grOWL'
+  case 'GROWL'
     if ~isempty(lambda1)
       warning('grOWL does not use the lambda1 parameter. It is being ignored.');
     end
@@ -298,7 +405,7 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaS
     lam1   = [];
     lamSeq = LambdaSeq;
 
-  case 'grOWL2'
+  case 'GROWL2'
     assert(~isempty(lambda)    , 'grOWL2 Lasso requires lambda.');
     assert(~isempty(lambda1)   , 'grOWL2 requires lambda1.');
     assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
@@ -309,8 +416,8 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(Gtype, lambda, lambda1, LambdaS
 end
 
 function assertRequiredParameters(params)
-  required = {'Gtype'    , 'simfile' , 'sim_varname'   , 'data', ...
-              'metadata' , 'cvfile'  , 'cvscheme'  ,'cvholdout' , 'finalholdout'};
+  required = {'regularization','target','sim_metric','sim_source','data', ...
+              'metadata','cvscheme','cvholdout','finalholdout','orientation'};
   N = length(required);
   for i = 1:N
     req = required{i};
@@ -327,10 +434,6 @@ function b = isintegerlike(x)
   b = mod(x,1) == 0;
 end
 
-function r = forceRowVec(v)
-  r = v(1:end);
-end
-
-function c = forceColVec(v)
-  c = v(:);
+function b = isMatOrJSON(x)
+    b = any(strcmpi(x, {'mat','json'}));
 end

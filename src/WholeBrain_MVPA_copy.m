@@ -4,8 +4,8 @@ function WholeBrain_MVPA(varargin)
   %% Parse and set parameters
   addParameter(p , 'debug'            , false     , @islogicallike );
   addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
-  addParameter(p , 'algorithm'        , []        , @ischar        );
-  addParameter(p , 'debias'           , false      , @islogicallike );
+  addParameter(p , 'regularization'   , []        , @ischar        );
+  addParameter(p , 'debias'           , false     , @islogicallike );
   addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
   addParameter(p , 'filters'          , []        , @ischarlike    );
@@ -52,12 +52,12 @@ function WholeBrain_MVPA(varargin)
   end
 
   % private function.
-  required = {'algorithm','data','metadata','cvscheme','cvholdout','finalholdout'};
+  required = {'regularization','data','metadata','cvscheme','cvholdout','finalholdout'};
   assertRequiredParameters(p.Results,required);
 
   DEBUG            = p.Results.debug;
   SmallFootprint   = p.Results.SmallFootprint;
-  algorithm            = p.Results.algorithm;
+  regularization        = p.Results.regularization;
   debias           = p.Results.debias;
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
@@ -89,8 +89,8 @@ function WholeBrain_MVPA(varargin)
 
   p.Results
 
-  % Check that the correct parameters are passed, given the desired algorithm
-  [lambda, alpha] = verifyLambdaSetup(algorithm, lambda, alpha);
+  % Check that the correct parameters are passed, given the desired regularization
+  [lambda, alpha] = verifyLambdaSetup(regularization, lambda, alpha);
 
   % If values originated in a YAML file, and scientific notation is used, the
   % value may have been parsed as a string. Check and correct.
@@ -194,9 +194,9 @@ function WholeBrain_MVPA(varargin)
   fprintf('Data loaded and processed.\n');
 
   %% Plug in the parameters and run
-  switch algorithm
+  switch regularization
   case 'lasso'
-    [results,info] = learn_category_encoding(Y, X, algorithm, ...
+    [results,info] = learn_category_encoding(Y, X, regularization, ...
                       'lambda'         , lambda         , ...
                       'alpha'          , alpha          , ...
                       'cvind'          , cvind          , ...
@@ -250,7 +250,7 @@ function WholeBrain_MVPA(varargin)
       xyz{ii} = metadata(ii).coords(z).xyz(colfilter{ii},:);
     end
     G = coordGrouping(xyz, diameter, overlap, shape);
-    [results,info] = learn_category_encoding(Y, X, algorithm, ...
+    [results,info] = learn_category_encoding(Y, X, regularization, ...
                       'groups'         , G              , ...
                       'lambda'         , lambda         , ...
                       'alpha'          , alpha          , ...
@@ -300,10 +300,10 @@ function WholeBrain_MVPA(varargin)
 end
 
 %% Local functions
-function [lambda, alpha] = verifyLambdaSetup(algorithm, lambda, alpha)
-% Each algorithm requires different lambda configurations. This private
+function [lambda, alpha] = verifyLambdaSetup(regularization, lambda, alpha)
+% Each regularization requires different lambda configurations. This private
 % function ensures that everything has been properly specified.
-  switch algorithm
+  switch regularization
   case 'lasso'
     if ~isempty(alpha)
       warning('Lasso does not use the alpha parameter. It is being ignored.');

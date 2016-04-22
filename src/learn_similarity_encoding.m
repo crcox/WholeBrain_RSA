@@ -1,8 +1,8 @@
-function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
+function [results,info] = learn_similarity_encoding(S, V, regularization, varargin)
   p = inputParser();
   addRequired(p,'S');
   addRequired(p,'V');
-  addRequired(p,'Gtype');
+  addRequired(p,'regularization');
   addParameter(p , 'tau'       , 0.2);
   addParameter(p , 'lambda'    , []);
   addParameter(p , 'lambda1'   , []);
@@ -14,11 +14,11 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   addParameter(p , 'PermutationTest'     , false);
   addParameter(p , 'AdlasOpts' , struct());
   addParameter(p , 'SmallFootprint' ,false);
-  parse(p, S, V, Gtype, varargin{:});
+  parse(p, S, V, regularization, varargin{:});
 
   S         = p.Results.S;
   V         = p.Results.V;
-  Gtype     = p.Results.Gtype;
+  regularization     = p.Results.regularization;
   tau       = p.Results.tau;
   lambda    = p.Results.lambda;
   lambda1   = p.Results.lambda1;
@@ -31,7 +31,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
 
-  if strcmp(Gtype, {'grOWL','grOWL2'});
+  if strcmp(regularization, {'grOWL','grOWL2'});
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
   end
 
@@ -69,7 +69,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
   results.lambda = [];
   results.lambda1 = [];
   results.LambdaSeq = [];
-  results.Gtype = [];
+  results.regularization = [];
   results.bias = [];
   results.normalize = [];
   results.nzv = [];
@@ -107,7 +107,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     disp(C(1:10,:))
   end
 
-  fprintf('%5s%6s%11s %11s  %11s  %11s  %11s  %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','p1 test','p1 train','cor test','cor train','n vox')
+  fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
 
   iii = 0; % index into 1-D results structure.
   for i = 1:ncv
@@ -118,7 +118,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
     V = Vorig;
 
     % normalize
-    switch normalize
+    switch lower(normalize)
     case 'zscore_train'
       mm = mean(V(train_set,1:nv),1);
       ss = std(V(train_set,1:nv),0,1);
@@ -162,7 +162,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
           info.message = 'DEBUG';
           info.iter    = 0;
         else
-          switch Gtype
+          switch upper(regularization)
           case 'L1L2'
             if all(lam==0)
               Uz = pinv(V1)*C1;
@@ -171,7 +171,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
               [Uz, info] = Adlas1(V1, C1, lam1, options);
             end
 
-          case 'grOWL'
+          case 'GROWL'
             switch LambdaSeq
             case 'linear'
               lamseq = lam*(d:-1:1)/d;
@@ -185,7 +185,7 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
               [Uz, info] = Adlas1(V1, C1, lamseq, options);
             end
 
-          case 'grOWL2'
+          case 'GROWL2'
             switch LambdaSeq
             case 'linear'
               lamseq = lam*(d:-1:1)/d;
@@ -200,6 +200,8 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
             else
               [Uz, info] = Adlas1(V1, C1, lamseq, options);
             end
+          otherwise
+            error('%s is not an implemented regularization. check spelling', regularization);
           end
         end
 
@@ -221,13 +223,13 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         Cz = V*Uz;
         St = C*C';
 
-        lt  = logical(tril(true(nnz(test_set)),0));
-        s   = S(test_set,test_set);
-        sz  = Sz(test_set,test_set);
-        st  = St(test_set,test_set);
-        s   = s(lt);
-        sz  = sz(lt);
-        st  = st(lt);
+        lt1  = logical(tril(true(nnz(test_set)),0));
+        s1   = S(test_set,test_set);
+        sz1  = Sz(test_set,test_set);
+        st1  = St(test_set,test_set);
+        s1   = s1(lt1);
+        sz1  = sz1(lt1);
+        st1  = st1(lt1);
 
         lt2 = logical(tril(true(nnz(train_set)),0));
         s2  = S(train_set,train_set);
@@ -250,24 +252,26 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         results(iii).lambda = lam;
         results(iii).lambda1 = lam1;
         results(iii).LambdaSeq = LambdaSeq;
-        results(iii).Gtype = Gtype;
+        results(iii).regularization = regularization;
         results(iii).bias = BIASUNIT;
         results(iii).normalize = normalize;
         results(iii).nzv = k1;
 
         if any(test_set)
-          results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-          results(iii).cor1    = corr(s,sz); % test
-          results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
-          results(iii).cor1t   = corr(st,sz); % test
+%          results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+%          results(iii).cor1    = corr(s,sz); % test
+%          results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
+%          results(iii).cor1t   = corr(st,sz); % test
           results(iii).err1    = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
+          results(iii).structureScoreMap = s1(:)' * sz1(:);
         end
 
-        results(iii).p2      = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        results(iii).cor2    = corr(s2,sz2); % train
-        results(iii).p2t     = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
-        results(iii).cor2t   = corr(st2,sz2); % train
+%        results(iii).p2      = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+%        results(iii).cor2    = corr(s2,sz2); % train
+%        results(iii).p2t     = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
+%        results(iii).cor2t   = corr(st2,sz2); % train
         results(iii).err2    = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
+        results(iii).structureScoreMap = s2(:)' * sz2(:);
 
         results(iii).iter    = info.iter;
 
@@ -288,8 +292,8 @@ function [results,info] = learn_similarity_encoding(S, V, Gtype, varargin)
         p2 = results(iii).p2;
         cor1 = results(iii).cor1;
         cor2 = results(iii).cor2;
-        fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10.2f | %10d\n', ...
-          icv, lambda_j,lambda1_k,err1,err2,p1,p2,cor1,cor2,k1);
+        fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10d\n', ...
+          icv, lambda_j,lambda1_k,err1,err2,k1);
       end % lam1 loop
     end % lam loop
   end % cv loop
