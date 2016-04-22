@@ -345,7 +345,7 @@ function WholeBrain_RSA(varargin)
 
   fprintf('Saving stuff.....\n');
 
-  [results.subject] = deal(subjid);
+  [results.subject] = deal(subjix);
   [results.finalholdout] = deal(finalholdoutInd);
 
   %% Save results
