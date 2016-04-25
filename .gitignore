@@ -6,3 +6,6 @@ bin/**
 source_code.tgz
 source_code.tar.gz
 *.dmr
+demo/results.json
+demo/results.mat
+demo/params.json

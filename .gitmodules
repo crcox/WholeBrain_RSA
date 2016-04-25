@@ -1,0 +1,3 @@
+[submodule "dependencies/simitar-rsa"]
+	path = dependencies/simitar-rsa
+	url = git://github.com/crcox/simitar-rsa.git

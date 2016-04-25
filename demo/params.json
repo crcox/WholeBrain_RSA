@@ -1,13 +1,19 @@
 {
-	"regularization": "GrOWL2",
+	"regularization": "L1L2",
 	"bias": 0,
 	"tau": 0.2,
-	"lambda1": 0.4200556,
-	"lambda": 0.5863,
+	"searchlight": 0,
+	"slShape": "cube",
+	"slSim_Measure": "nrsa",
+	"slRadius": 8,
+	"slPermutationType": "overMatrices",
+	"slPermutations": 1000,
+	"lambda1": 8,
+	"lambda": 8,
 	"LambdaSeq": "inf",
 	"cvscheme": 1,
-	"cvholdout": [1,2,3,4,5,6,7,8,9,10],
-	"finalholdout": 0,
+	"cvholdout": [2,3,4,5,6,7,8,9,10],
+	"finalholdout": 1,
 	"target": "visual",
 	"sim_source": "chamfer",
 	"sim_metric": "chamfer",
@@ -16,12 +22,12 @@
 	"normalize": "stdev",
 	"metadata": "./shared/metadata.mat",
 	"metadata_varname": "metadata",
-	"orientation": "mni",
+	"orientation": "tlrc",
 	"filters": [
 		"ROI01",
 		"GoodRows"
 	],
 	"SmallFootprint": 0,
 	"debug": 0,
-	"SaveResultsAs": "json"
+	"SaveResultsAs": "mat"
 }

@@ -14,6 +14,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   addParameter(p , 'PermutationTest'     , false);
   addParameter(p , 'AdlasOpts' , struct());
   addParameter(p , 'SmallFootprint' ,false);
+  addParameter(p , 'Verbose' ,true);
   parse(p, S, V, regularization, varargin{:});
 
   S         = p.Results.S;
@@ -30,6 +31,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
+  VERBOSE   = p.Results.Verbose;
 
   if strcmp(regularization, {'grOWL','grOWL2'});
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
@@ -73,14 +75,15 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   results.bias = [];
   results.normalize = [];
   results.nzv = [];
-  results.p1      =  [];
-  results.p2      =  [];
-  results.cor1    =  [];
-  results.cor2    =  [];
-  results.p1t     =  [];
-  results.p2t     =  [];
-  results.cor1t   =  [];
-  results.cor2t   =  [];
+%  results.p1      =  [];
+%  results.p2      =  [];
+%  results.cor1    =  [];
+%  results.cor2    =  [];
+%  results.p1t     =  [];
+%  results.p2t     =  [];
+%  results.cor1t   =  [];
+%  results.cor2t   =  [];
+  results.coords  =  [];
   results.err1    =  [];
   results.err2    =  [];
   results.iter    =  [];
@@ -90,24 +93,33 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
 
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
+  fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
 
-  fprintf('PermutationTest: %d\n', PermutationTest);
+  if VERBOSE
+    fprintf('PermutationTest: %d\n', PermutationTest);
+  end
   if PermutationTest
     n = size(C,1);
-    fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
-    fprintf('First 10 rows of C, before shuffling.\n')
-    disp(C(1:10,:))
+    if VERBOSE
+      fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
+      fprintf('First 10 rows of C, before shuffling.\n')
+      disp(C(1:10,:))
+    end
     permix = randperm(n);
     C = C(permix, :);
 %    for i = 1:r
 %      permix = randperm(n);
 %      C(:,i) = C(permix, i);
 %    end
-    fprintf('First 10 rows of C, after shuffling.\n')
-    disp(C(1:10,:))
+    if VERBOSE
+      fprintf('First 10 rows of C, after shuffling.\n')
+      disp(C(1:10,:))
+    end
   end
 
-  fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
+  if VERBOSE
+    fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
+  end
 
   iii = 0; % index into 1-D results structure.
   for i = 1:ncv
@@ -216,11 +228,16 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
         % St : The approximated S, reconstructed from actual C.
         % Uz : The estimated voxel weights, with a r weights per voxel.
 
+        nz_rows = any(Uz,2);
+        ix = find(nz_rows);
+        nv = size(Uz,1);
+        Unz = nnz(nz_rows);
+        uz = Uz(ix,:);
+
         % Prepare to evaluate solutions
-        k1 = nnz(any(Uz,2));
-        Wz = Uz*Uz';
-        Sz = V*Wz*V';
-        Cz = V*Uz;
+        Wz = uz*uz';
+        Sz = V(:,ix)*Wz*V(:,ix)';
+        Cz = V(:,ix)*uz;
         St = C*C';
 
         lt1  = logical(tril(true(nnz(test_set)),0));
@@ -240,12 +257,14 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
         st2 = st2(lt2);
 
         if ~SMALL
-          results(iii).Uz = Uz;
+          results(iii).Uz = uz;
+          results(iii).Uix = uint32(ix);
           results(iii).Cz = Cz;
           results(iii).Sz = Sz;
-          results(iii).nz_rows = any(Uz,2);
         end
         % Metadata
+        results(iii).nzv = uint32(Unz);
+        results(iii).nvox = uint32(nv);
         results(iii).subject =  []; % handled in parent function
         results(iii).cvholdout = icv;
         results(iii).finalholdout = []; % handled in parent function
@@ -255,7 +274,6 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
         results(iii).regularization = regularization;
         results(iii).bias = BIASUNIT;
         results(iii).normalize = normalize;
-        results(iii).nzv = k1;
 
         if any(test_set)
 %          results(iii).p1      = trace(corr(S(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
@@ -288,14 +306,18 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
 
         err1 = results(iii).err1;
         err2 = results(iii).err2;
-        p1 = results(iii).p1;
-        p2 = results(iii).p2;
-        cor1 = results(iii).cor1;
-        cor2 = results(iii).cor2;
-        fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10d\n', ...
-          icv, lambda_j,lambda1_k,err1,err2,k1);
+%        p1 = results(iii).p1;
+%        p2 = results(iii).p2;
+%        cor1 = results(iii).cor1;
+%        cor2 = results(iii).cor2;
+        if VERBOSE
+          fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10d\n', ...
+            icv, lambda_j,lambda1_k,err1,err2,Unz);
+        end
       end % lam1 loop
     end % lam loop
   end % cv loop
-  fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
+  if VERBOSE
+    fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
+  end
 end % learn_similarity_encoding
