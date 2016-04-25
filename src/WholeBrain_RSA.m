@@ -34,7 +34,6 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'slShape'          , []        , @ischar        );
   addParameter(p , 'slSim_Measure'    , []        , @ischar        );
   addParameter(p , 'slRadius'         , []        , @isnumeric     );
-  addParameter(p , 'slTestToUse'      , 'accuracyOneSided_analytical', @ischar);
   addParameter(p , 'slPermutationType', []        , @ischar        );
   addParameter(p , 'slPermutations'   , 0         , @isscalar      );
   % Parameters below this line are unused in the analysis, may exist in the
@@ -96,6 +95,9 @@ function WholeBrain_RSA(varargin)
 
   % Check that the correct parameters are passed, given the desired regularization
   [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
+  if SEARCHLIGHT & ~strcmpi(slSim_Measure,'nrsa')
+    (slSimMeasure,slPermutationType
+  end
 
   % If values originated in a YAML file, and scientific notation is used, the
   % value may have been parsed as a string. Check and correct.
