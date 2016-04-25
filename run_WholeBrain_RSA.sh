@@ -89,7 +89,6 @@ trap abort EXIT
 trap terminated SIGTERM SIGKILL
 
 set -e
-set -x
 SQUID="http://proxy.chtc.wisc.edu/SQUID/crcox"
 ## Download the runtime environment from SQUID
 download "${SQUID}/r2013b.tar.gz" 5
@@ -111,8 +110,8 @@ while read url; do
 done < ALLURLS
 
 # Run the Matlab application
-exe_name=$0
-exe_dir=`dirname "$0"`
+exe_name=$1
+exe_dir=`dirname "$1"`
 echo "------------------------------------------"
 echo Setting up environment variables
 MCRROOT="v82"
@@ -125,7 +124,8 @@ XAPPLRESDIR=${MCRROOT}/X11/app-defaults ;
 export XAPPLRESDIR;
 export LD_LIBRARY_PATH;
 echo LD_LIBRARY_PATH is ${LD_LIBRARY_PATH};
-eval "${exe_dir}/WholeBrain_RSA"
+echo "${exe_dir}/${exe_name}"
+eval "${exe_dir}/${exe_name}"
 
 # Exit successfully. Hooray!
 trap success EXIT SIGTERM
