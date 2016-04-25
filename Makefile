@@ -1,32 +1,40 @@
-MCC=/usr/local/MATLAB/R2013b/bin/mcc
-MEX=/usr/local/MATLAB/R2013b/bin/mex
-MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm
-SRCDIR=.
-IDIRS=
-.PHONEY: clean clean-all all source_code.tar.gz extract
+export MATLABDIR = /usr/local/MATLAB/R2013b
+export MCC=$(MATLABDIR)/bin/mcc
+export MEX=$(MATLABDIR)/bin/mex
+export MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm
+TOP := $(shell pwd)
+SRCTAR=source_code.tar.gz
+SRC=src
+DEP=dependencies
+JSON=$(DEP)/jsonlab
+SIMITAR=$(DEP)/simitar-rsa
+INCL= -I $(SRC) -I $(JSON) -I $(SIMITAR) 
+.PHONEY: all clean-all clean-simitar clean-postbuild simiart sdist
 
-all: WholeBrain_RSA binaries.tar.gz
+all: setup simitar WholeBrain_RSA clean-postbuild
+
+setup: $(SRC) $(DEP)
+
+$(SRC) $(DEP):
+	tar xzvf $(SRCTAR)
+
+simitar:
+	$(MAKE) -C $(SIMITAR)
+
+WholeBrain_RSA: $(SRC)/WholeBrain_RSA.m $(SIMITAR)/simitar.mexa64
+	$(MCC) -v $(MFLAGS) $(INCL) -o $@ $<
+
+clean-postbuild:
+	rm *.dmr
+	rm mccExcludedFiles.log
+	rm readme.txt
+	rm run_WholeBrain_RSA.sh
 
 sdist:
-	tar czhf source_code.tar.gz src dependencies ProxSortedL1
+	tar czhf $(SRCTAR) src dependencies
 
-extract:
-	-mkdir source_code/
-	tar xzf source_code.tar.gz -C ./source_code/
-
-WholeBrain_RSA: $(SRCDIR)/WholeBrain_RSA.m
-	$(MCC) $(MFLAGS) $(IDIRS) -o $@ WholeBrain_RSA.m 
-
-binaries.tar.gz: WholeBrain_RSA run_WholeBrain_RSA.sh
-	mkdir bin/
-	mv WholeBrain_RSA WholeBrain_RSA.sh bin/
-	tar czvf $@ bin/
-
-clean:
-	-rm *.dmr
-	-rm _condor_std???
-	-rm readme.txt
-	-rm mccExcludedFiles.log
-
-clean-all: binaries.tar.gz
-	rm -rf src/ bin/
+clean-all:
+	-rm WholeBrain_RSA
+	-rm $(SIMITAR)/simitar.mexa64
+	-rm $(LIBSVM)/findneighbours.mexa64
+	-rm $(LIBSVM)/fastscoring.mexa64

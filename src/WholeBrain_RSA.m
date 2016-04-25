@@ -96,7 +96,8 @@ function WholeBrain_RSA(varargin)
   % Check that the correct parameters are passed, given the desired regularization
   [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
   if SEARCHLIGHT & ~strcmpi(slSim_Measure,'nrsa')
-    (slSimMeasure,slPermutationType
+    assert(~isempty(slPermutationType));
+    assert(~isempty(slPermutationCount));
   end
 
   % If values originated in a YAML file, and scientific notation is used, the
