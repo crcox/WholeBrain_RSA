@@ -162,11 +162,13 @@ function WholeBrain_RSA(varargin)
 
   %% Select targets
   S = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
-  S = S{1};
 
   %% Load data
   [X,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata);
-  X = X{1};
+  if iscell(X) && numel(X) == 1
+    X = X{1};
+  end
+  S = S{subjix};
   metadata   = metadata(subjix);
   rowfilter  = rowfilter{subjix};
   colfilter  = colfilter{subjix};
@@ -176,8 +178,6 @@ function WholeBrain_RSA(varargin)
   COORDS = metadata.coords(z);
   xyz = COORDS.xyz(colfilter,:);
   fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
-
-
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
   %% Include voxel for bias

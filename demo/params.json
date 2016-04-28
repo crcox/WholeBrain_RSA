@@ -2,7 +2,7 @@
 	"regularization": "L1L2",
 	"bias": 0,
 	"tau": 0.2,
-	"searchlight": 0,
+	"searchlight": 1,
 	"slShape": "cube",
 	"slSim_Measure": "nrsa",
 	"slRadius": 8,

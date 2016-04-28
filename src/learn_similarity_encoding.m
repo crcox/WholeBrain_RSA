@@ -93,7 +93,9 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
 
   %square root
   [C, r] = sqrt_truncate_r(S, tau);
-  fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
+  if VERBOSE
+    fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
+  end
 
   if VERBOSE
     fprintf('PermutationTest: %d\n', PermutationTest);
