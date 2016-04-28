@@ -139,11 +139,13 @@ function WholeBrain_RSA(varargin)
   if SEARCHLIGHT && strcmpi(slSim_Measure,'nrsa') && finalholdoutInd > 0
     %% Select targets
     Sall = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
-    Sall = Sall{1};
 
     %% Load data
     [Xall,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata);
-    Xall = Xall{1};
+    if iscell(Xall) && numel(Xall) == 1
+      Xall = Xall{1};
+    end
+    Sall = Sall{subjix};
   end
 
   %% Load CV indexes, and identify the final holdout set.
@@ -161,6 +163,13 @@ function WholeBrain_RSA(varargin)
   end
 
   %% Select targets
+  fprintf('\n');
+  fprintf('Loading similarity structure\n');
+  fprintf('----------------------------\n');
+  fprintf('%12s: %s\n', 'target_label', target_label);
+  fprintf('%12s: %s\n', 'sim_source', sim_source);
+  fprintf('%12s: %s\n', 'sim_metric', sim_metric);
+  fprintf('\n');
   S = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
 
   %% Load data
@@ -203,7 +212,7 @@ function WholeBrain_RSA(varargin)
   %% ---------------------Setting regularization parameters-------------------------
   if SEARCHLIGHT
     X = uncell(X);
-    S = uncell(S)+1;
+    S = uncell(S);
     cvind = uncell(cvind);
     cvset = unique(cvind);
     colfilter = uncell(colfilter);
