@@ -31,10 +31,10 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON);
   % --- searchlight specific --- %
   addParameter(p , 'searchlight'      , []        , @islogicallike );
-  addParameter(p , 'slShape'          , []        , @ischar        );
-  addParameter(p , 'slSim_Measure'    , []        , @ischar        );
+  addParameter(p , 'slShape'          , ''        , @ischar        );
+  addParameter(p , 'slSim_Measure'    , ''        , @ischar        );
   addParameter(p , 'slRadius'         , []        , @isnumeric     );
-  addParameter(p , 'slPermutationType', []        , @ischar        );
+  addParameter(p , 'slPermutationType', ''        , @ischar        );
   addParameter(p , 'slPermutations'   , 0         , @isscalar      );
   % Parameters below this line are unused in the analysis, may exist in the
   % parameter file because other progams use them.
@@ -442,14 +442,15 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
     if ~isempty(lambda1)
       warning('grOWL does not use the lambda1 parameter. It is being ignored.');
     end
-    assert(~isempty(lambda)    , 'Group Lasso requires lambda.');
+    assert(~isempty(lambda)    , 'grOWL requires lambda.');
+    assert(~isempty(lambda1)   , 'grOWL requires lambda1.');
     assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
     lam    = lambda;
-    lam1   = [];
+    lam1   = lambda1;
     lamSeq = LambdaSeq;
 
   case 'GROWL2'
-    assert(~isempty(lambda)    , 'grOWL2 Lasso requires lambda.');
+    assert(~isempty(lambda)    , 'grOWL2 requires lambda.');
     assert(~isempty(lambda1)   , 'grOWL2 requires lambda1.');
     assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
     lam    = lambda;

@@ -188,7 +188,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
           case 'GROWL'
             switch LambdaSeq
             case 'linear'
-              lamseq = lam*(d:-1:1)/d;
+              lamseq = lam*(d:-1:1)/d + lam1;
             case 'exponential'
               lamseq = lam*sqrt(2*log((d*ones(1,d))./(1:d)));
             end
