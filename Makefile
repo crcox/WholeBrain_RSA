@@ -25,10 +25,10 @@ WholeBrain_RSA: $(SRC)/WholeBrain_RSA.m $(SIMITAR)/simitar.mexa64
 	$(MCC) -v $(MFLAGS) $(INCL) -o $@ $<
 
 clean-postbuild:
-	rm *.dmr
-	rm mccExcludedFiles.log
-	rm readme.txt
-	rm run_WholeBrain_RSA.sh
+	-rm *.dmr
+	-rm mccExcludedFiles.log
+	-rm readme.txt
+	-rm run_WholeBrain_RSA.sh
 
 sdist:
 	tar czhf $(SRCTAR) src dependencies
