@@ -367,6 +367,7 @@ function WholeBrain_RSA(varargin)
       [results,info] = learn_similarity_encoding(S, X, regularization, ...
                         'tau'            , tau            , ...
                         'lambda'         , lambda         , ...
+                        'lambda1'        , lambda1        , ...
                         'LambdaSeq'      , LambdaSeq      , ...
                         'cvind'          , cvind          , ...
                         'cvholdout'      , cvholdout      , ...
@@ -448,12 +449,9 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
     lamSeq = [];
 
   case 'GROWL'
-    if ~isempty(lambda1)
-      warning('grOWL does not use the lambda1 parameter. It is being ignored.');
-    end
-    assert(~isempty(lambda)    , 'grOWL requires lambda.');
-    assert(~isempty(lambda1)   , 'grOWL requires lambda1.');
-    assert(~isempty(LambdaSeq) , 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
+    assert(~isempty(lambda) && ~isnan(lambda), 'grOWL requires lambda.');
+    assert(~isempty(lambda1) && ~isnan(lambda1), 'grOWL requires lambda1.');
+    assert(~isempty(LambdaSeq), 'A LambdaSeq type (linear or exponential) must be set when using grOWL*.');
     lam    = lambda;
     lam1   = lambda1;
     lamSeq = LambdaSeq;
