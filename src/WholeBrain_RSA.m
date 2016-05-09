@@ -167,6 +167,7 @@ function WholeBrain_RSA(varargin)
   fprintf('Loading similarity structure\n');
   fprintf('----------------------------\n');
   fprintf('%12s: %s\n', 'target_label', target_label);
+  fprintf('%12s: %s\n', 'type', 'similarity');
   fprintf('%12s: %s\n', 'sim_source', sim_source);
   fprintf('%12s: %s\n', 'sim_metric', sim_metric);
   fprintf('\n');

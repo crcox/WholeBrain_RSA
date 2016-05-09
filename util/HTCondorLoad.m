@@ -24,6 +24,7 @@ function [Results, Params] = HTCondorLoad(ResultDir, varargin)
     addParameter(p,'SortJobs',false,@islogical)
     addParameter(p,'SkipFields',[])
     addParameter(p,'JobList',{},@iscellstr)
+    addParameter(p,'legacy',false,@islogical)
     addParameter(p,'quiet',false,@islogical)
     parse(p,ResultDir, varargin{:});
 
@@ -33,6 +34,7 @@ function [Results, Params] = HTCondorLoad(ResultDir, varargin)
     SORT_JOBS   = p.Results.SortJobs;
     SKIP        = p.Results.SkipFields;
     QUIET       = p.Results.quiet;
+    LEGACY      = p.Results.legacy;
     jobDirs     = p.Results.JobList;
 
     if isempty(jobDirs)
@@ -62,6 +64,7 @@ function [Results, Params] = HTCondorLoad(ResultDir, varargin)
     paramsPath = fullfile(jobDir, PARAMS_FILE);
     tmp_p = loadjson(paramsPath);
     tmp_p.jobdir = 0;
+    tmp_p.subject = 0;
     Params(nJobDirs) = tmp_p;
     tmp = load(resultPath);
     if ~isfield(tmp,'results')
@@ -96,6 +99,7 @@ function [Results, Params] = HTCondorLoad(ResultDir, varargin)
         paramsPath  = fullfile(jobDir,PARAMS_FILE);
         tmp         = loadjson(paramsPath);
         tmp.jobdir  = jobDir;
+        tmp.subject = sscanf(tmp.data,'s%02d');
         Params(i)   = tmp;
         clear tmp;
 
@@ -105,14 +109,47 @@ function [Results, Params] = HTCondorLoad(ResultDir, varargin)
             continue;
         end
         tmp = load(resultPath);
-        R = tmp.results;
+        if isfield(tmp,'results')
+          R = tmp.results;
+        else
+          R = tmp;
+        end
+        if LEGACY
+          tmp = [fieldnames(R)';cellfun(@(x) mat2cell(x, ones(size(x,1),1), size(x,2)), struct2cell(R), 'Unif', 0)'];
+          R = struct(tmp{:});
+        end
         [R.job] = deal(i);
         if ~isempty(SKIP)
             R = rmfield(R, SKIP);
         end
         a = cursor + 1;
         b = cursor + numel(R);
-        Results(a:b) = R;
+        if LEGACY
+          Params(i).cvholdout = mat2cell(Params(i).cvholdout,1,ones(1,numel(Params(i).cvholdout)));
+          Params(i).filters = {Params(i).filters};
+          Params(i).COPY = {Params(i).COPY};
+          tmp = [fieldnames(Params)';struct2cell(Params(i))'];
+          ParamsAB = struct(tmp{:});
+
+          fnames = fieldnames(Results);
+          nf = numel(fnames);
+          for iF = 1:nf
+            fn = fnames{iF};
+            iiR = 0;
+            for iR = a:b
+              iiR = iiR + 1;
+              if isfield(R,fn)
+                Results(iR).(fn) = R(iiR).(fn);
+              elseif isfield(Params,fn)
+                Results(iR).(fn) = ParamsAB(iiR).(fn);
+              else
+                % do nothing
+              end
+            end
+          end
+        else
+          Results(a:b) = R;
+        end
         cursor = b;
     end
     a = cursor + 1;
