@@ -1,8 +1,8 @@
 % TUTORIAL: Run WholeBrain_RSA in a way suitable for distributed computing
 % ========================================================================
 
-% The data
-% ========
+%% The data
+%  ========
 % The fMRI data should be formatted in a time x voxel matrix, X. Each row of
 % this matrix is a training example, and so should include all voxels that the
 % model may be trained on/evaluated with. By ``time'', I also mean ``item''.
@@ -25,8 +25,8 @@ Y = struct('visual',randn(100,3),'semantic',randn(100,8));
 VISUAL = squareform(pdist(Y.visual));
 SEMANTIC = squareform(pdist(Y.semantic));
 
-% The metadata
-% ============
+%% The metadata
+%  ============
 % Targets
 % -------
 % Information about targets (i.e., possible y vectors) should be stored in a
@@ -93,8 +93,8 @@ xyz = [(1:nVoxels)',ones(nVoxels,1),ones(nVoxels,1)];
 COORDS(1) = struct('orientation','orig','xyz',xyz);
 COORDS(2) = struct('orientation','tlrc','xyz',xyz);
 
-% Put it all together
-% -------------------
+%% Put it all together
+%  ===================
 % The metadata object compiles these three items, along with a couple other
 % bits, into a single structure. The metadata structure has several required
 % fields: 'subject', 'targets', 'filters', 'coords', 'cvind', 'nrow', 'ncol',
@@ -125,8 +125,8 @@ metadata(2).ncol = nVoxels;
 metadata(2).itemindex = 1:nItems;
 metadata(2).runindex = ones(1,nItems);
 
-% Save the data to disk
-% =====================
+%% Save the data to disk
+%  =====================
 % Despite having data and metadata organized properly in memory, before working
 % with WholeBrain_RSA we need to write the data to disk. The reason for this
 % is that WholeBrain_RSA is not written to be used interactively, but rather
@@ -183,8 +183,8 @@ for iSubj = 1:2
 end
 save(fullfile(datadir,'metadata.mat'), 'metadata');
 
-% Define a parameter file
-% =======================
+%% Define a parameter file
+%  =======================
 % WholeBrain_RSA, despite being written as a Matlab function, is a very ugly
 % function. First of all, it does not return anything. All results are written
 % to disk. Likewise, although it is possible to invoke WholeBrain_RSA from
@@ -211,20 +211,20 @@ addpath('../dependencies/jsonlab/');
 % relative with respect to where you execute WholeBrain_RSA, but in most cases
 % it will probably make sense for them to be absolute. The following should
 % translate into a valid json file for the purpose of this demo.
-params = struct('regularization', 'GrOWL2', 'bias', false,'tau',0.2,...
+params = struct('regularization','GrOWL2','bias',0,'tau',0.2,...
     'lambda1', 0.4200556, 'lambda', 0.5863, 'LambdaSeq', 'inf',...
     'cvscheme', 1,'cvholdout', 1:10, 'finalholdout', 0,...
     'target', 'visual', 'sim_source', 'chamfer', 'sim_metric', 'chamfer',...
     'data', './shared/s100.mat', 'data_var', 'X',...
     'normalize', 'stdev', 'metadata', './shared/metadata.mat',...
-    'metadata_varname', 'metadata', 'orientation', 'mni',...
+    'metadata_varname', 'metadata', 'orientation', 'tlrc',...
     'filters', {{'ROI01','GoodRows'}}, 'SmallFootprint', false,...
     'debug', false, 'SaveResultsAs','json');
 
 savejson('',params,'FileName','params.json','ForceRootName',false);
 
-% Run WholeBrain_RSA
-% ===================
+%% Run WholeBrain_RSA
+%  ===================
 % With data and metadata structured properly and saved to disk, and with a
 % parameter file named params.json in a folder where you would like to execute
 % the analysis and return results, all that remains is to boot up Matlab in the
@@ -239,8 +239,8 @@ addpath('../src/')
 WholeBrain_RSA()
 
 
-% Run WholeBrain_RSA: Searchlight
-% ===============================
+%% Run WholeBrain_RSA: Searchlight
+%  ===============================
 % Put the parameter file where you want to run the analysis. Paths can be
 % relative with respect to where you execute WholeBrain_RSA, but in most cases
 % it will probably make sense for them to be absolute. The following should
@@ -263,8 +263,8 @@ savejson('',params,'FileName','params.json','ForceRootName',false);
 
 WholeBrain_RSA()
 
-% Compile Results
-% ===============
+%% Compile Results
+%  ===============
 % If you are using WholeBrain_RSA on a distributed computing cluster, you will
 % quickly find that the volume of results is difficult to manage effectively. I
 % have written some utility functions in Wholebrain_MVPA/util that attempt to

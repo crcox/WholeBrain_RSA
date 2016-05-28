@@ -9,3 +9,4 @@ source_code.tar.gz
 demo/results.json
 demo/results.mat
 demo/params.json
+demo/shared/*

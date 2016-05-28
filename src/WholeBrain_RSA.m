@@ -30,7 +30,7 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'SanityCheckModel' , []        , @ischar        );
   addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON);
   % --- searchlight specific --- %
-  addParameter(p , 'searchlight'      , []        , @islogicallike );
+  addParameter(p , 'searchlight'      , 0        , @islogicallike );
   addParameter(p , 'slShape'          , ''        , @ischar        );
   addParameter(p , 'slSim_Measure'    , ''        , @ischar        );
   addParameter(p , 'slRadius'         , []        , @isnumeric     );
@@ -136,7 +136,7 @@ function WholeBrain_RSA(varargin)
     end
   end
 
-  if SEARCHLIGHT && strcmpi(slSim_Measure,'nrsa') && finalholdoutInd > 0
+  if ~isempty(SEARCHLIGHT) && SEARCHLIGHT && strcmpi(slSim_Measure,'nrsa') && finalholdoutInd > 0
     %% Select targets
     Sall = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
 
