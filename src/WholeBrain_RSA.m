@@ -95,7 +95,7 @@ function WholeBrain_RSA(varargin)
 
   % Check that the correct parameters are passed, given the desired regularization
   [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
-  if SEARCHLIGHT & ~strcmpi(slSim_Measure,'nrsa')
+  if SEARCHLIGHT && ~strcmpi(slSim_Measure,'nrsa')
     assert(~isempty(slPermutationType));
     assert(~isempty(slPermutationCount));
   end
