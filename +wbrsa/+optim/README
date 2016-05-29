@@ -1,0 +1,3 @@
+These functions are wrappers to core optimization routines. They are written so
+that they can be passed to MATLAB's own optimization tools for finding optimal
+free-paramerter values.

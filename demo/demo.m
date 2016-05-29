@@ -205,7 +205,8 @@ save(fullfile(datadir,'metadata.mat'), 'metadata');
 % To read and write json, you will need jsonlab
 % (http://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 % which I have bundled with my code:
-addpath('../dependencies/jsonlab/');
+addpath('../');
+import wbrsa.shared.jsonlab.savejson
 
 % Put the parameter file where you want to run the analysis. Paths can be
 % relative with respect to where you execute WholeBrain_RSA, but in most cases

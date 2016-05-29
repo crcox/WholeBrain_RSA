@@ -1,6 +1,7 @@
 *.*~
 log/
 log/**
+_trash/**
 bin/
 bin/**
 source_code.tgz
