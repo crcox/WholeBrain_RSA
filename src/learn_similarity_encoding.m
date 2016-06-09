@@ -92,9 +92,15 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   results(numel(cvset)*nlam1*nlam).Uz = [];
 
   %square root
-  [C, r] = sqrt_truncate_r(S, tau);
-  if VERBOSE
-    fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
+  switch target_type
+  case 'similarity'
+    [C, r] = sqrt_truncate_r(S, tau);
+    if VERBOSE
+      fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
+    end
+  case 'embedding'
+    C = S;
+    r = size(C,2);
   end
 
   if VERBOSE

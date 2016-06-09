@@ -10,6 +10,7 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'normalize'        , false                      );
   addParameter(p , 'bias'             , false     , @islogicallike );
   addParameter(p , 'target'           , []        , @ischar        );
+  addParameter(p , 'target_type'      , []        , @ischar        );
   addParameter(p , 'sim_source'       , []        , @ischar        );
   addParameter(p , 'sim_metric'       , []        , @ischar        );
   addParameter(p , 'filters'          , []                         );
@@ -64,6 +65,7 @@ function WholeBrain_RSA(varargin)
   normalize        = p.Results.normalize;
   BIAS             = p.Results.bias;
   target_label     = p.Results.target;
+  target_type      = p.Results.target_type;
   sim_source       = p.Results.sim_source;
   sim_metric       = p.Results.sim_metric;
   filter_labels    = p.Results.filters;
@@ -138,7 +140,7 @@ function WholeBrain_RSA(varargin)
 
   if ~isempty(SEARCHLIGHT) && SEARCHLIGHT && strcmpi(slSim_Measure,'nrsa') && finalholdoutInd > 0
     %% Select targets
-    Sall = selectTargets(metadata, 'similarity', target_label, sim_source, sim_metric, rowfilter);
+    Sall = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter);
 
     %% Load data
     [Xall,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata);
