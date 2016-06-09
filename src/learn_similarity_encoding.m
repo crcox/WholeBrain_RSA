@@ -3,7 +3,8 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   addRequired(p,'S');
   addRequired(p,'V');
   addRequired(p,'regularization');
-  addParameter(p , 'tau'       , 0.2);
+  addRequired(p,'target_type');
+  addParameter(p , 'tau'       , []);
   addParameter(p , 'lambda'    , []);
   addParameter(p , 'lambda1'   , []);
   addParameter(p , 'cvind'     , []);
@@ -20,6 +21,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   S         = p.Results.S;
   V         = p.Results.V;
   regularization     = p.Results.regularization;
+  target_type = p.Results.target_type;
   tau       = p.Results.tau;
   lambda    = p.Results.lambda;
   lambda1   = p.Results.lambda1;
@@ -248,21 +250,23 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
         Cz = V(:,ix)*uz;
         St = C*C';
 
-        lt1  = logical(tril(true(nnz(test_set)),0));
-        s1   = S(test_set,test_set);
-        sz1  = Sz(test_set,test_set);
-        st1  = St(test_set,test_set);
-        s1   = s1(lt1);
-        sz1  = sz1(lt1);
-        st1  = st1(lt1);
+        if strcmpi(target_type,'similarity')
+          lt1  = logical(tril(true(nnz(test_set)),0));
+          s1   = S(test_set,test_set);
+          sz1  = Sz(test_set,test_set);
+          st1  = St(test_set,test_set);
+          s1   = s1(lt1);
+          sz1  = sz1(lt1);
+          st1  = st1(lt1);
 
-        lt2 = logical(tril(true(nnz(train_set)),0));
-        s2  = S(train_set,train_set);
-        sz2 = Sz(train_set,train_set);
-        st2 = St(train_set,train_set);
-        s2  = s2(lt2);
-        sz2 = sz2(lt2);
-        st2 = st2(lt2);
+          lt2 = logical(tril(true(nnz(train_set)),0));
+          s2  = S(train_set,train_set);
+          sz2 = Sz(train_set,train_set);
+          st2 = St(train_set,train_set);
+          s2  = s2(lt2);
+          sz2 = sz2(lt2);
+          st2 = st2(lt2);
+        end
 
         if ~SMALL
           results(iii).Uz = uz;
@@ -289,7 +293,9 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
 %          results(iii).p1t     = trace(corr(St(test_set,:)',Sz(test_set,:)'))/nnz(test_set);
 %          results(iii).cor1t   = corr(st,sz); % test
           results(iii).err1    = norm(C(test_set,:) - Cz(test_set,:),'fro')/norm(C(test_set,:),'fro');
-          results(iii).structureScoreMap = s1(:)' * sz1(:);
+          if strcmpi(target_type,'similarity')
+            results(iii).structureScoreMap = s1(:)' * sz1(:);
+          end
         end
 
 %        results(iii).p2      = trace(corr(S(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
@@ -297,7 +303,9 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
 %        results(iii).p2t     = trace(corr(St(train_set,:)',Sz(train_set,:)'))/nnz(train_set);
 %        results(iii).cor2t   = corr(st2,sz2); % train
         results(iii).err2    = norm(C(train_set,:) - Cz(train_set,:),'fro')/norm(C(train_set,:),'fro');
-        results(iii).structureScoreMap = s2(:)' * sz2(:);
+        if strcmpi(target_type,'similarity')
+          results(iii).structureScoreMap = s2(:)' * sz2(:);
+        end
 
         results(iii).iter    = info.iter;
 
