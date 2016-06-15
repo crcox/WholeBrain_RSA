@@ -29,7 +29,8 @@ function WholeBrain_RSA(varargin)
   addParameter(p , 'AdlasOpts'        , struct()  , @isstruct      );
   addParameter(p , 'SanityCheckData'  , []        , @ischar        );
   addParameter(p , 'SanityCheckModel' , []        , @ischar        );
-  addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON);
+  addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON   );
+  addParameter(p , 'subject_id_fmt' , '%d'        , @ischar        );
   % --- searchlight specific --- %
   addParameter(p , 'searchlight'      , 0        , @islogicallike );
   addParameter(p , 'slShape'          , ''        , @ischar        );
@@ -85,6 +86,7 @@ function WholeBrain_RSA(varargin)
   SanityCheckData  = p.Results.SanityCheckData;
   SanityCheckModel = p.Results.SanityCheckModel;
   SaveResultsAs    = p.Results.SaveResultsAs;
+  FMT_subjid       = p.Results.subject_id_fmt;
   % --- searchlight specific --- %
   SEARCHLIGHT   = p.Results.searchlight;
   slSim_Measure = p.Results.slSim_Measure;
@@ -176,7 +178,7 @@ function WholeBrain_RSA(varargin)
   S = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter);
 
   %% Load data
-  [X,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata);
+  [X,subjix] = loadData(datafile, data_varname, rowfilter, colfilter, metadata, FMT_subjid);
   if iscell(X) && numel(X) == 1
     X = X{1};
   end

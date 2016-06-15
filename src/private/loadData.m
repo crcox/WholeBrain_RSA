@@ -1,4 +1,4 @@
-function [X,subjix] = loadData(datafile,data_var,rowfilter,colfilter,metadata)
+function [X,subjix] = loadData(datafile,data_var,rowfilter,colfilter,metadata,FMT_subjid)
   % Load data for multiple subjects, and apply filters.
   datafile  = ascell(datafile);
   rowfilter = ascell(rowfilter);
@@ -8,7 +8,7 @@ function [X,subjix] = loadData(datafile,data_var,rowfilter,colfilter,metadata)
   X         = cell(N,1);
   for i = 1:N
     fprintf('Loading %s from  %s...\n', data_var, datafile{i});
-    subjid    = extractSubjectID(datafile{i});
+    subjid    = extractSubjectID(datafile{i},FMT_subjid);
     subjix(i) = find([metadata.subject] == subjid);
     tmp       = load(datafile{i}, data_var);
     X{i}      = tmp.(data_var); clear tmp;
