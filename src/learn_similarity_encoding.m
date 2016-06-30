@@ -1,4 +1,4 @@
-function [results,info] = learn_similarity_encoding(S, V, regularization, varargin)
+function [results,info] = learn_similarity_encoding(S, V, regularization, target_type, varargin)
   p = inputParser();
   addRequired(p,'S');
   addRequired(p,'V');
@@ -16,7 +16,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
   addParameter(p , 'AdlasOpts' , struct());
   addParameter(p , 'SmallFootprint' ,false);
   addParameter(p , 'Verbose' ,true);
-  parse(p, S, V, regularization, varargin{:});
+  parse(p, S, V, regularization, target_type, varargin{:});
 
   S         = p.Results.S;
   V         = p.Results.V;
@@ -109,21 +109,21 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, vararg
     fprintf('PermutationTest: %d\n', PermutationTest);
   end
   if PermutationTest
-    n = size(C,1);
-    if VERBOSE
-      fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
-      fprintf('First 10 rows of C, before shuffling.\n')
-      disp(C(1:10,:))
-    end
-    permix = randperm(n);
-    C = C(permix, :);
-%    for i = 1:r
-%      permix = randperm(n);
-%      C(:,i) = C(permix, i);
-%    end
-    if VERBOSE
-      fprintf('First 10 rows of C, after shuffling.\n')
-      disp(C(1:10,:))
+    for ic = unique(cvind)'
+        disp(sprintf('Permuting CV %d...', ic));
+        c = C(cvind==ic,:);
+        n = size(c,1);
+        if VERBOSE
+            fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
+            fprintf('First 10 rows of C, before shuffling.\n')
+            disp(c)
+        end
+        permix = randperm(n);
+        C(cvind==ic, :) = c(permix, :);
+        if VERBOSE
+            fprintf('First 10 rows of C, after shuffling.\n')
+            disp(c(permix,:))
+        end
     end
   end
 
