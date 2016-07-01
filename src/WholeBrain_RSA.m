@@ -98,7 +98,9 @@ function WholeBrain_RSA(varargin)
   rng(RandomSeed);
 
   % Check that the correct parameters are passed, given the desired regularization
-  [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
+  if ~isempty(regularization)
+    [lambda, lambda1, LambdaSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq);
+  end
   if SEARCHLIGHT && ~strcmpi(slSim_Measure,'nrsa')
     assert(~isempty(slPermutationType));
     assert(~isempty(slPermutationCount));
@@ -338,7 +340,18 @@ function WholeBrain_RSA(varargin)
         end
       end
     else
-      [structureScoreMap,structurePvalueMap] = computeSimilarityStructureMap(...
+      fprintf('PermutationTest: %d\n', PermutationTest);
+      if PermutationTest
+        for ic = unique(cvind)'
+          fprintf('Permuting CV %d...\n', ic);
+          s = S(cvind==ic, cvind==ic);
+          n = size(s,1);
+          permix = randperm(n);
+          S(cvind==ic, cvind==ic) = S(permix, permix);
+        end
+      end
+
+      [structureScoreMap] = computeSimilarityStructureMap(...
         slSim_Measure,...
         X,labels,...
         X,labels,...
@@ -347,7 +360,7 @@ function WholeBrain_RSA(varargin)
         'groupLabels',labelsRun,labelsRun);
 
       results.structureScoreMap = structureScoreMap;
-      results.pvalue_map = structurePvalueMap;
+      results.RandomSeed = RandomSeed;
     end
 
     for iResult = 1:numel(results)
@@ -472,7 +485,7 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
 end
 
 function assertRequiredParameters(params)
-  required = {'regularization','target','sim_metric','sim_source','data', ...
+  required = {'target','sim_metric','sim_source','data', ...
               'metadata','cvscheme','cvholdout','finalholdout','orientation'};
   N = length(required);
   for i = 1:N
