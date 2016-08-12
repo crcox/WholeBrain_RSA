@@ -102,7 +102,11 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
     paramsPath  = fullfile(jobDir,PARAMS_FILE);
     tmp         = loadjson(paramsPath);
     tmp.jobdir  = jobDir;
-    tmp.subject = sscanf(tmp.data,'s%02d');
+    if iscell(tmp.data)
+      tmp.subject = cellfun(@(x) sscanf(x,'s%02d'), tmp.data, 'Unif', 0);;
+    else
+      tmp.subject = sscanf(tmp.data,'s%02d');
+    end
     Params(i)   = tmp;
     clear tmp;
 
