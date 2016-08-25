@@ -109,6 +109,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     fprintf('PermutationTest: %d\n', PermutationTest);
   end
   if PermutationTest
+    PERMUTATION_INDEXES = cell(1, max(cvind));
     for ic = unique(cvind)'
         disp(sprintf('Permuting CV %d...', ic));
         c = C(cvind==ic,:);
@@ -275,10 +276,10 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
           results(iii).Sz = Sz;
         end
         % Metadata
-        results(iii).nzv = uint32(Unz);
-        results(iii).nvox = uint32(nv);
+        results(iii).nzv = uint32(Unz); % number of nonzero rows
+        results(iii).nvox = uint32(nv); % total number of voxels
         results(iii).subject =  []; % handled in parent function
-        results(iii).cvholdout = icv;
+        results(iii).cvholdout = icv; % cross validation index
         results(iii).finalholdout = []; % handled in parent function
         results(iii).lambda = lam;
         results(iii).lambda1 = lam1;

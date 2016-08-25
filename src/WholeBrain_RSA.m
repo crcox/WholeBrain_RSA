@@ -192,7 +192,18 @@ function WholeBrain_RSA(varargin)
   cvindAll   = cvindAll{subjix};
   z = strcmp({metadata.coords.orientation}, orientation);
   COORDS = metadata.coords(z);
-  xyz = COORDS.xyz(colfilter,:);
+  COORDS_FIELDS = fieldnames(COORDS);
+  for i = 1:numel(COORDS_FIELDS)
+    cfield = COORDS_FIELDS{i};
+    switch cfield
+    case 'ind'
+      COORDS.ind = COORDS.ind(colfilter);
+    case 'ijk'
+      COORDS.ijk = COORDS.ijk(colfilter,:);
+    case 'xyz'
+      COORDS.xyz = COORDS.xyz(colfilter,:);
+  end
+  xyz = COORDS.xyz;
   fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
   fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
 
@@ -365,7 +376,6 @@ function WholeBrain_RSA(varargin)
 
     for iResult = 1:numel(results)
       results(iResult).coords = COORDS;
-      results(iResult).coords.xyz = xyz;
     end
   else
     switch upper(regularization)
@@ -411,7 +421,16 @@ function WholeBrain_RSA(varargin)
     end
     for iResult = 1:numel(results)
       results(iResult).coords = COORDS;
-      results(iResult).coords.xyz = xyz(results(iResult).nz_rows,:);
+      for i = 1:numel(COORDS_FIELDS)
+        cfield = COORDS_FIELDS{i};
+        switch cfield
+        case 'ind'
+          results(iResult).coords.ind = COORDS.ind(results(iResult).Uix);
+        case 'ijk'
+          results(iResult).coords.ijk = COORDS.ijk(results(iResult).Uix,:);
+        case 'xyz'
+          results(iResult).coords.xyz = COORDS.xyz(results(iResult).Uix,:);
+      end
     end
   end
 

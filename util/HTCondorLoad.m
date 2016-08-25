@@ -24,6 +24,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
   addParameter(p,'ParamFile','params.json',@ischar);
   addParameter(p,'SortJobs',false,@islogical)
   addParameter(p,'SkipFields',[])
+  addParameter(p,'IncludeFields',[])
   addParameter(p,'JobList',{},@iscellstr)
   addParameter(p,'legacy',false,@islogical)
   addParameter(p,'quiet',false,@islogical)
@@ -34,6 +35,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
   PARAMS_FILE = p.Results.ParamFile;
   SORT_JOBS   = p.Results.SortJobs;
   SKIP        = p.Results.SkipFields;
+  INCLUDE     = p.Results.IncludeFields;
   QUIET       = p.Results.quiet;
   LEGACY      = p.Results.legacy;
   jobDirs     = p.Results.JobList;
@@ -45,11 +47,18 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
   end
   nJobDirs = numel(jobDirs);
 
-  if ~isempty(SKIP)
+  if ~isempty(SKIP) && ~isempty(INCLUDE)
+    error('Both SKIP and INCLUDE cannot be set.')
+  elseif ~isempty(SKIP) && isempty(INCLUDE)
       SkipStr = SKIP;
       SkipStr{end} = ['and ', SKIP{end}];
       SkipStr = strjoin(SkipStr, ', ');
       fprintf('Fields %s will be skipped.\n', SkipStr);
+  elseif isempty(SKIP) && ~isempty(INCLUDE)
+      InclStr = INCLUDE;
+      InclStr{end} = ['and ', INCLUDE{end}];
+      InclStr = strjoin(InclStr, ', ');
+      fprintf('Fields %s will be Included.\n', InclStr);
   end
 
 %% Preallocate result structure
@@ -77,9 +86,11 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
         clear tmp2;
     end
     R = tmp.results;
-    if ~isempty(SKIP)
-        R = rmfield(R, SKIP);
+    if ~isempty(INCLUDE) && isempty(SKIP)
+        SKIP = fieldnames(rmfield(R,INCLUDE));
     end
+    R = rmfield(R, SKIP);
+      
     N = nJobDirs * numel(R);
     Results = R(1);
     Results.job = 0;
@@ -127,9 +138,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
         R = struct(tmp{:});
       end
       [R.job] = deal(i);
-      if ~isempty(SKIP)
-          R = rmfield(R, SKIP);
-      end
+      R = rmfield(R, SKIP);
       a = cursor + 1;
       b = cursor + numel(R);
       if LEGACY
