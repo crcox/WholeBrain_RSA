@@ -202,6 +202,7 @@ function WholeBrain_RSA(varargin)
       COORDS.ijk = COORDS.ijk(colfilter,:);
     case 'xyz'
       COORDS.xyz = COORDS.xyz(colfilter,:);
+    end
   end
   xyz = COORDS.xyz;
   fprintf('Initial dimensions: (%d,%d)\n', size(X,1), size(X,2));
@@ -425,11 +426,13 @@ function WholeBrain_RSA(varargin)
         cfield = COORDS_FIELDS{i};
         switch cfield
         case 'ind'
-          results(iResult).coords.ind = COORDS.ind(results(iResult).Uix);
+          tmpind = COORDS.ind(results(iResult).Uix);
+          results(iResult).coords.ind = tmpind(:)';
         case 'ijk'
           results(iResult).coords.ijk = COORDS.ijk(results(iResult).Uix,:);
         case 'xyz'
           results(iResult).coords.xyz = COORDS.xyz(results(iResult).Uix,:);
+        end
       end
     end
   end

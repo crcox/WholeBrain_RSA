@@ -1,0 +1,63 @@
+# Network RSA
+# ===========
+regularization: growl2
+
+# Parameters
+# ----------
+bias: 0
+lambda: 3.367
+lambda1: 8
+LambdaSeq: "inf"
+normalize: zscore
+
+# Data and Metadata Paths
+# =======================
+data:
+  - /home/chris/MRI/Manchester/data/avg/s02_avg.mat
+data_var: visual
+metadata: /home/chris/MRI/Manchester/data/avg/metadata_avg_new.mat
+metadata_var: metadata
+
+# Metadata Field References
+# =========================
+# K-fold Cross Validation
+# -----------------------
+cvscheme: 1
+cvholdout:
+  - [2,3,4,5,6,7,8,9]
+finalholdout: 1
+
+# Targets
+# -------
+target: "semantic"
+target_type: "similarity"
+sim_source: "featurenorms"
+sim_metric: "cosine"
+tau: 0.3
+
+# Coordinates
+# -----------
+orientation: orig
+
+# Filters
+# -------
+filters:
+  - rowfilter_vis
+  - colfilter_vis
+  - ROI_visual
+
+# WholeBrain_RSA Options
+# =======================
+SmallFootprint: 0
+SaveResultsAs: [mat,json]
+subject_id_fmt: s%d_avg.mat
+executable: "/home/chris/src/WholeBrain_RSA/bin/WholeBrain_RSA"
+wrapper: "/home/chris/src/WholeBrain_RSA/run_WholeBrain_RSA.sh"
+
+# condortools/setupJob Options
+# ============================
+EXPAND:
+  - SaveResultsAs
+COPY: []
+URLS: []
+

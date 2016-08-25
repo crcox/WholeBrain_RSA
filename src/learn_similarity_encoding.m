@@ -271,7 +271,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
 
         if ~SMALL
           results(iii).Uz = uz;
-          results(iii).Uix = uint32(ix);
+          results(iii).Uix = uint32(ix(:)');
           results(iii).Cz = Cz;
           results(iii).Sz = Sz;
         end
