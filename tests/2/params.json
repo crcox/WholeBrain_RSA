@@ -1,0 +1,44 @@
+{
+    "LambdaSeq": "inf", 
+    "SaveResultsAs": "json", 
+    "SmallFootprint": 1, 
+    "bias": 0, 
+    "cvholdout": [
+        [
+            2, 
+            3, 
+            4, 
+            5, 
+            6, 
+            7, 
+            8, 
+            9
+        ]
+    ], 
+    "cvscheme": 1, 
+    "data": [
+        "/home/chris/MRI/Manchester/data/avg/s02_avg.mat"
+    ], 
+    "data_var": "visual", 
+    "executable": "/home/chris/src/WholeBrain_RSA/bin/WholeBrain_RSA", 
+    "filters": [
+        "rowfilter_vis", 
+        "colfilter_vis", 
+        "ROI_visual"
+    ], 
+    "finalholdout": 1, 
+    "lambda": 3.367, 
+    "lambda1": 8, 
+    "metadata": "/home/chris/MRI/Manchester/data/avg/metadata_avg_new.mat", 
+    "metadata_var": "metadata", 
+    "normalize": "zscore", 
+    "orientation": "orig", 
+    "regularization": "growl2", 
+    "sim_metric": "cosine", 
+    "sim_source": "featurenorms", 
+    "subject_id_fmt": "s%d_avg.mat", 
+    "target": "semantic", 
+    "target_type": "similarity", 
+    "tau": 0.3, 
+    "wrapper": "/home/chris/src/WholeBrain_RSA/run_WholeBrain_RSA.sh"
+}

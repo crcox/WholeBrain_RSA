@@ -420,18 +420,20 @@ function WholeBrain_RSA(varargin)
                         'SmallFootprint' , SmallFootprint , ...
                         'AdlasOpts'      , opts); %#ok<ASGLU>
     end
-    for iResult = 1:numel(results)
-      results(iResult).coords = COORDS;
-      for i = 1:numel(COORDS_FIELDS)
-        cfield = COORDS_FIELDS{i};
-        switch cfield
-        case 'ind'
-          tmpind = COORDS.ind(results(iResult).Uix);
-          results(iResult).coords.ind = tmpind(:)';
-        case 'ijk'
-          results(iResult).coords.ijk = COORDS.ijk(results(iResult).Uix,:);
-        case 'xyz'
-          results(iResult).coords.xyz = COORDS.xyz(results(iResult).Uix,:);
+    if ~SmallFootprint
+      for iResult = 1:numel(results)
+        results(iResult).coords = COORDS;
+        for i = 1:numel(COORDS_FIELDS)
+          cfield = COORDS_FIELDS{i};
+          switch cfield
+          case 'ind'
+            tmpind = COORDS.ind(results(iResult).Uix);
+            results(iResult).coords.ind = tmpind(:)';
+          case 'ijk'
+            results(iResult).coords.ijk = COORDS.ijk(results(iResult).Uix,:);
+          case 'xyz'
+            results(iResult).coords.xyz = COORDS.xyz(results(iResult).Uix,:);
+          end
         end
       end
     end

@@ -48,8 +48,8 @@ filters:
 
 # WholeBrain_RSA Options
 # =======================
-SmallFootprint: 0
-SaveResultsAs: [mat,json]
+SmallFootprint: [0,0,1]
+SaveResultsAs: [mat,json,json]
 subject_id_fmt: s%d_avg.mat
 executable: "/home/chris/src/WholeBrain_RSA/bin/WholeBrain_RSA"
 wrapper: "/home/chris/src/WholeBrain_RSA/run_WholeBrain_RSA.sh"
@@ -57,7 +57,7 @@ wrapper: "/home/chris/src/WholeBrain_RSA/run_WholeBrain_RSA.sh"
 # condortools/setupJob Options
 # ============================
 EXPAND:
-  - SaveResultsAs
+  - [SaveResultsAs, SmallFootprint]
 COPY: []
 URLS: []
 
