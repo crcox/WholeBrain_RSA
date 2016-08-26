@@ -1,9 +1,15 @@
 #!/bin/bash
 # script for execution of deployed applications
-#
-# Sets up the MCR environment for the current $ARCH and executes
-# the specified command.
-#
+extractIfNecessary() {
+  case "$1" in
+  *.tar.gz | *.tgz )
+    tar xzf "$1"
+          ;;
+  *)
+    # it's not
+          ;;
+  esac
+}
 download() {
   url=$1
   maxtries=$2
@@ -23,12 +29,13 @@ download() {
 }
 cleanup() {
   # Remove the Matlab runtime distribution
-  if [ -f "r2013b.tar.gz" ]; then
-    rm -v "r2013b.tar.gz"
+  if [ -f "r2014b.tar.gz" ]; then
+    rm -v "r2014b.tar.gz"
   fi
   if [ -f "./libXmu_libXt.el6.x86_64.tgz" ]; then
     rm -v "./libXmu_libXt.el6.x86_64.tgz"
   fi
+
   # Check the home directory for any transfered files.
   if [ -f ALLURLS ]; then
     while read url; do
@@ -72,6 +79,22 @@ terminated() {
   echo 2 >> EXIT_STATUS
   exit 2
 }
+killed() {
+  echo >&2 '
+***************
+**  KILLED   **
+***************
+'
+  echo >&2 "Files at time of interrupt"
+  echo >&2 "--------------------------"
+  ls >&2 -l
+
+  cleanup
+
+  echo "An error occured. Exiting ..." >&2
+  echo 3 >> EXIT_STATUS
+  exit 3
+}
 success() {
   echo '
 *************
@@ -86,13 +109,14 @@ success() {
 # If an exit or interrupt occurs while the script is executing, run the abort
 # function.
 trap abort EXIT
-trap terminated SIGTERM SIGKILL
+trap terminated SIGTERM
+trap killed SIGKILL
 
 set -e
 SQUID="http://proxy.chtc.wisc.edu/SQUID/crcox"
 ## Download the runtime environment from SQUID
-download "${SQUID}/r2013b.tar.gz" 5
-tar xzf "r2013b.tar.gz"
+download "${SQUID}/r2014b.tar.gz" 5
+tar xzf "r2014b.tar.gz"
 
 # This is an attempt to fix broken environments by shipping libraries that are
 # missing on some nodes.
@@ -107,6 +131,7 @@ cat URLS URLS_SHARED > ALLURLS
 cat ALLURLS
 while read url; do
   download "http://proxy.chtc.wisc.edu/SQUID/${url}" 5
+  #extractIfNecessary "$(basename ${url})" # not working
 done < ALLURLS
 
 # Run the Matlab application
@@ -114,7 +139,7 @@ exe_name=$1
 exe_dir=`dirname "$1"`
 echo "------------------------------------------"
 echo Setting up environment variables
-MCRROOT="v82"
+MCRROOT="v84"
 echo ---
 LD_LIBRARY_PATH=.:${MCRROOT}/runtime/glnxa64 ;
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MCRROOT}/bin/glnxa64 ;
