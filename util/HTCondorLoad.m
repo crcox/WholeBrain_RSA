@@ -23,8 +23,8 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
   addParameter(p,'ResultFile','results.mat',@ischar);
   addParameter(p,'ParamFile','params.json',@ischar);
   addParameter(p,'SortJobs',false,@islogical)
-  addParameter(p,'SkipFields',[])
-  addParameter(p,'IncludeFields',[])
+  addParameter(p,'SkipFields',{})
+  addParameter(p,'IncludeFields',{})
   addParameter(p,'JobList',{},@iscellstr)
   addParameter(p,'legacy',false,@islogical)
   addParameter(p,'quiet',false,@islogical)

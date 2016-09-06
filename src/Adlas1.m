@@ -85,7 +85,7 @@ function [X,info] = Adlas1(A,B,lambda,options)
   STATUS_RUNNING    = 0;
   STATUS_OPTIMAL    = 1;
   STATUS_ITERATIONS = 2;
-  STATUS_ALLZERO    = 2;
+  STATUS_ALLZERO    = 3;
   STATUS_MSG = {'Optimal','Iteration limit reached','All weights set to zero'};
 
   % Initialize parameters and iterates

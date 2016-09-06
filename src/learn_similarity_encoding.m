@@ -10,6 +10,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
   addParameter(p , 'cvind'     , []);
   addParameter(p , 'cvholdout' , []);
   addParameter(p , 'normalize' , []);
+  addParameter(p , 'bias'      , []);
   addParameter(p , 'LambdaSeq' , []);
   addParameter(p , 'DEBUG'     , false);
   addParameter(p , 'PermutationTest'     , false);
@@ -28,6 +29,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
   cvind     = p.Results.cvind;
   holdout   = p.Results.cvholdout;
   normalize = p.Results.normalize;
+  BIAS      = p.Results.bias;
   LambdaSeq = p.Results.LambdaSeq;
   PermutationTest = p.Results.PermutationTest;
   DEBUG     = p.Results.DEBUG;
@@ -39,9 +41,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
   end
 
-  [~,d] = size(V);
   Vorig = V;
-  BIASUNIT = all(V(:,end)==1);
 
   if isempty(lambda)
     nlam = 1;
@@ -143,24 +143,43 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     % normalize
     switch lower(normalize)
     case 'zscore_train'
-      mm = mean(V(train_set,1:nv),1);
-      ss = std(V(train_set,1:nv),0,1);
+      mm = mean(V(train_set,:),1);
+      ss = std(V(train_set,:),0,1);
     case 'zscore'
-      mm = mean(V(:,1),1);
+      mm = mean(V,1);
       ss = std(V,0,1);
+    case 'stdev_train'
+      mm = zeros(1, size(V,2));
+      ss = std(V(train_set,:),0,1);
     case 'stdev'
-      mm = 0;
+      mm = zeros(1, size(V,2));
       ss = std(V,0,1);
+    case '2norm_train'
+      mm = mean(V(train_set,:),1);
+      ss = norm(V(train_set,:));
     case '2norm'
       mm = mean(V,1);
       ss = norm(V);
     otherwise
-      mm = 0;
-      ss = 1;
+      error('Unrecognized normalizaion method! Exiting...')
     end
-    V = bsxfun(@minus,V, mm);
     z = ss > 0;
+    V(:,z) = bsxfun(@minus,V(:,z), mm(z));
     V(:,z) = bsxfun(@rdivide,V(:,z), ss(z));
+    if any(~z)
+      warning('There are %d constant-valued voxels. These voxels are not normalize These voxels are not normalized.', sum(z));
+      if VERBOSE
+        fprintf('Constant-valued voxel indexes:\n');
+        disp(find(~z));
+      end
+    end
+
+    % bias
+    if BIAS
+      V = [V, ones(size(V,1),1)];
+    end
+
+    [~,d] = size(V);
 
     C1 = C(train_set,:);
     V1 = V(train_set,:);
@@ -285,7 +304,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
         results(iii).lambda1 = lam1;
         results(iii).LambdaSeq = LambdaSeq;
         results(iii).regularization = regularization;
-        results(iii).bias = BIASUNIT;
+        results(iii).bias = BIAS;
         results(iii).normalize = normalize;
 
         if any(test_set)
