@@ -63,10 +63,9 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
   ncv = numel(cvset);
 
   % Define results structure
-  results.Uz = [];
+  results.bias = []; % intercept/bias weight(s)
+  results.Uz = []; % sparse matrix
   results.Cz = [];
-  results.Sz = [];
-  results.nz_rows =  [];
   results.subject =  [];
   results.cvholdout = [];
   results.finalholdout = [];
@@ -260,7 +259,6 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
 
         nz_rows = any(Uz,2);
         ix = find(nz_rows);
-        nv = size(Uz,1);
         Unz = nnz(nz_rows);
         uz = Uz(ix,:);
 
@@ -287,16 +285,29 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
           sz2 = sz2(lt2);
           st2 = st2(lt2);
         end
-
+        
+        if BIAS
+          ix = find(nz_rows(1:end-1));
+          nvox = numel(nz_rows(1:end-1));
+          nzv = nnz(nz_rows(1:end-1));
+          bias = Uz(end,:);
+        else
+          ix = find(nz_rows);
+          nvox = numel(nz_rows);
+          nzv = nnz(nz_rows);
+          bias = [];
+        end
+        
         if ~SMALL
-          results(iii).Uz = uz;
-          results(iii).Uix = uint32(ix(:)');
+          [row,col] = ndgrid(ix,1:size(Uz,2));
+          results(iii).bias = bias;
+          results(iii).Uz = sparse(row(:),col(:),reshape(Uz(ix,:),nzv*r,1),nvox,r);
           results(iii).Cz = Cz;
-          results(iii).Sz = Sz;
         end
         % Metadata
-        results(iii).nzv = uint32(Unz); % number of nonzero rows
-        results(iii).nvox = uint32(nv); % total number of voxels
+        % Number of nonzero voxels --- do not include bias unit in count.
+        results(iii).nzv = uint32(nzv);
+        results(iii).nvox = uint32(size(nvox)); % total number of voxels
         results(iii).subject =  []; % handled in parent function
         results(iii).cvholdout = icv; % cross validation index
         results(iii).finalholdout = []; % handled in parent function
@@ -304,7 +315,6 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
         results(iii).lambda1 = lam1;
         results(iii).LambdaSeq = LambdaSeq;
         results(iii).regularization = regularization;
-        results(iii).bias = BIAS;
         results(iii).normalize = normalize;
 
         if any(test_set)

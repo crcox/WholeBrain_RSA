@@ -86,10 +86,11 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
         clear tmp2;
     end
     R = tmp.results;
+    
     if ~isempty(INCLUDE) && isempty(SKIP)
-        SKIP = fieldnames(rmfield(R,INCLUDE));
+        SKIP = fieldnames(rmfield(R, INCLUDE(ismember(INCLUDE,fields(R)))));
     end
-    R = rmfield(R, SKIP);
+    R = rmfield(R, SKIP(ismember(SKIP,fields(R))));
       
     N = nJobDirs * numel(R);
     Results = R(1);
@@ -138,7 +139,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
         R = struct(tmp{:});
       end
       [R.job] = deal(i);
-      R = rmfield(R, SKIP);
+      R = rmfield(R, SKIP(ismember(SKIP,fields(R))));
       a = cursor + 1;
       b = cursor + numel(R);
       if LEGACY

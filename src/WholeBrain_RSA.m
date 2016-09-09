@@ -429,22 +429,17 @@ function WholeBrain_RSA(varargin)
     end
     if ~SmallFootprint
       for iResult = 1:numel(results)
-        results(iResult).coords = COORDS;
-        if BIAS
-          ix = find(any(results(iResult).Uz(1:end-1,:), 2));
-        else
-          ix = results(iResult).Uix;
-        end
+        nz_rows = any(results(iResult).Uz,2);
         for i = 1:numel(COORDS_FIELDS)
           cfield = COORDS_FIELDS{i};
           switch cfield
           case 'ind'
-            tmpind = COORDS.ind(ix);
+            tmpind = COORDS.ind(nz_rows);
             results(iResult).coords.ind = tmpind(:)'; % When writing to JSON, much more efficient as row vector.
           case 'ijk'
-            results(iResult).coords.ijk = COORDS.ijk(ix,:);
+            results(iResult).coords.ijk = COORDS.ijk(nz_rows,:);
           case 'xyz'
-            results(iResult).coords.xyz = COORDS.xyz(ix,:);
+            results(iResult).coords.xyz = COORDS.xyz(nz_rows,:);
           end
         end
       end
@@ -455,7 +450,6 @@ function WholeBrain_RSA(varargin)
 
   [results.subject] = deal(subjix);
   [results.finalholdout] = deal(finalholdoutInd);
-  [results.bias] = deal(BIAS);
   [results.RandomSeed] = deal(RandomSeed);
 
   %% Save results
