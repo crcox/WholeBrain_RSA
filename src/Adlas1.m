@@ -14,22 +14,23 @@ function [X,info] = Adlas1(A,B,lambda,options)
 % The options parameter is a structure with the following optional fields
 % with [default value]:
 %
-%   .iterations   Maximum number of iterations            [10,000]
-%   .verbosity    0 = nothing, 1 = major, 2 = every             [1]
-%   .fid        File identifier for output            [1 = stdout]
-%   .optimIter    Iterations between optimality-condition checks    [1]
-%   .gradIter     Iterations between full gradient computations    [20]
-%   .tolInfeas    Maximum allowed dual infeasibility          [1e-6]
-%   .tolRelGap    Stopping criterion for relative primal-dual gap [1e-6]
-%   .xInit        Initial value of x                  [zeros(n,1)]
+%   .includeBiasUnit Add column of ones to end of A                     [1]
+%   .iterations      Maximum number of iterations                  [10,000]
+%   .verbosity       0 = nothing, 1 = major, 2 = every                  [1]
+%   .fid             File identifier for output                [1 = stdout]
+%   .optimIter       Iterations between optimality-condition checks     [1]
+%   .gradIter        Iterations between full gradient computations     [20]
+%   .tolInfeas       Maximum allowed dual infeasibility              [1e-6]
+%   .tolRelGap       Stopping criterion for relative primal-dual gap [1e-6]
+%   .xInit           Initial value of x                        [zeros(n,1)]
 %
 % The info output structure contains the following fields
 %
-%   .runtime      Runtime
+%   .runtime    Runtime
 %   .Aprods     Number of products with A
-%   .ATprods      Number of products with A^T
-%   .objPrimal    Primal objective
-%   .objDual      Dual objective (possibly for infeasible dual point)
+%   .ATprods    Number of products with A^T
+%   .objPrimal  Primal objective
+%   .objDual    Dual objective (possibly for infeasible dual point)
 %   .infeas     Dual infeasibility
 %   .status     Status: 1 = optimal, 2 = iterations
 %
@@ -46,15 +47,16 @@ function [X,info] = Adlas1(A,B,lambda,options)
   % -------------------------------------------------------------
   if (nargin <  4), options = struct(); end;
 
-  iterations    = getDefaultField(options,'iterations',100000);
-  miniterations = getDefaultField(options,'miniterations',0);
-  verbosity     = getDefaultField(options,'verbosity',0);
-  fid           = getDefaultField(options,'fid',1);
-  optimIter     = getDefaultField(options,'optimIter',1);
-  gradIter      = getDefaultField(options,'gradIter',20);
-  tolInfeas     = getDefaultField(options,'tolInfeas',1e-6);
-  tolRelGap     = getDefaultField(options,'tolRelGap',1e-8);
-  xInit         = getDefaultField(options,'xInit',[]);
+  includeBiasUnit = getDefaultField(options,'includeBiasUnit',1);
+  iterations      = getDefaultField(options,'iterations',10000);
+  miniterations   = getDefaultField(options,'miniterations',0);
+  verbosity       = getDefaultField(options,'verbosity',0);
+  fid             = getDefaultField(options,'fid',1);
+  optimIter       = getDefaultField(options,'optimIter',1);
+  gradIter        = getDefaultField(options,'gradIter',20);
+  tolInfeas       = getDefaultField(options,'tolInfeas',1e-6);
+  tolRelGap       = getDefaultField(options,'tolRelGap',1e-8);
+  xInit           = getDefaultField(options,'xInit',[]);
 
   % Ensure that lambda is non-increasing
   if ((length(lambda) > 1) && any(lambda(2:end) > lambda(1:end-1)))
@@ -63,17 +65,26 @@ function [X,info] = Adlas1(A,B,lambda,options)
   if (lambda(end) < 0)
     error('Lambda must be nonnegative');
   elseif (lambda(1) == 0)
-    error('Lambda must have at least one nonnegative entry.');
+    error('Lambda must have at least one nonzero entry.');
   end
-
 
   % -------------------------------------------------------------
   % Initialize
   % -------------------------------------------------------------
 
   % Get problem dimension
-  n = size(A,2);
+  [nitems,nfeatures] = size(A);
   r = size(B,2);
+
+  if includeBiasUnit
+    A = [A,ones(nitems,1)];
+    features = [true(1,nfeatures),false];
+    n = nfeatures + 1;
+  else
+    features = true(1,nfeatures);
+    n = nfeatures;
+  end
+
   % Get initial lower bound on the Lipschitz constant
   s = RandStream('mt19937ar','Seed',0);
   X = randn(s,n,r); X = X / norm(X,'fro');
@@ -139,16 +150,16 @@ function [X,info] = Adlas1(A,B,lambda,options)
     if ((mod(iter,optimIter) == 0))
       % Compute 'dual', check infeasibility and gap
       if (modeLasso)
-        gs = sqrt(sum(g.^2,2));
-        ys = sqrt(sum(Y.^2,2));
+        gs = sqrt(sum(g(features,:).^2,2));
+        ys = sqrt(sum(Y(features,:).^2,2));
 
         infeas = max(norm(gs,inf)-lambda,0);
 
         objPrimal = f + lambda*norm(ys,1);
         objDual   = -f - trace(r'*B);
       else
-        gs     = sort(sqrt(sum(g.^2,2)),'descend');
-        ys     = sort(sqrt(sum(Y.^2,2)),'descend');
+        gs     = sort(sqrt(sum(g(features,:).^2,2)),'descend');
+        ys     = sort(sqrt(sum(Y(features,:).^2,2)),'descend');
         infeas = max(max(cumsum(gs-lambda)),0);
 
         % Compute primal and dual objective
@@ -209,7 +220,11 @@ function [X,info] = Adlas1(A,B,lambda,options)
     % Lipschitz search
     while (L < inf)
       % Compute prox mapping
-      X = proxFunction(Y - (1/L)*g, lambda/L);
+      Y_update = Y - (1/L)*g;
+      %lambda should be same size as features
+      X(features,:) = proxFunction(Y_update(features,:), lambda/L);
+      X(~features,:) = Y_update(~features,:);
+
       d = X - Y;
 
       Ax = A*X;%A1*vec(X);
@@ -261,7 +276,7 @@ end % Function Adlas
 % ------------------------------------------------------------------------
 function opt = getDefaultField(data,field,default)
 % ------------------------------------------------------------------------
-  if isfield(data,field)
+  if isfield(data,field) && ~isempty(data.(field))
     opt = data.(field);
   else
     opt = default;
@@ -278,6 +293,6 @@ function x = proxL1L2(Y,lambda)
   r = size(Y,2);
   xtmp = tmp./(repmat(sqrt(sum(tmp.^2,2))+realmin,1,r));
    x = xtmp.*repmat(max(sqrt(sum(tmp.^2,2))-lambda,0),1,r);
-  %disp(nnz(any(x,2)))    
+  %disp(nnz(any(x,2)))
   %x    = Y .* ((max(y - lambda,0)./(y + realmin))*ones(1,size(Y,2)));
 end
