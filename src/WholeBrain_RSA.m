@@ -199,9 +199,13 @@ function WholeBrain_RSA(varargin)
     cfield = COORDS_FIELDS{i};
     switch cfield
     case 'ind'
-      COORDS.ind = COORDS.ind(colfilter);
+      if ~isempty(COORDS.ind)
+        COORDS.ind = COORDS.ind(colfilter);
+      end
     case 'ijk'
-      COORDS.ijk = COORDS.ijk(colfilter,:);
+      if ~isempty(COORDS.ijk)
+        COORDS.ijk = COORDS.ijk(colfilter,:);
+      end
     case 'xyz'
       COORDS.xyz = COORDS.xyz(colfilter,:);
     end
