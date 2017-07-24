@@ -14,6 +14,8 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
   addParameter(p , 'LambdaSeq' , []);
   addParameter(p , 'DEBUG'     , false);
   addParameter(p , 'PermutationTest'     , false);
+  addParameter(p , 'PermutationMethod', 'simple');
+  addParameter(p , 'RestrictPermutationByCV', false);
   addParameter(p , 'AdlasOpts' , struct());
   addParameter(p , 'SmallFootprint' ,false);
   addParameter(p , 'Verbose' ,true);
@@ -32,6 +34,8 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
   BIAS      = p.Results.bias;
   LambdaSeq = p.Results.LambdaSeq;
   PermutationTest = p.Results.PermutationTest;
+  PermutationMethod  = p.Results.PermutationMethod;
+  RestrictPermutationByCV = p.Results.RestrictPermutationByCV;
   DEBUG     = p.Results.DEBUG;
   options   = p.Results.AdlasOpts;
   SMALL     = p.Results.SmallFootprint;
@@ -109,23 +113,31 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     fprintf('PermutationTest: %d\n', PermutationTest);
   end
   if PermutationTest
-    PERMUTATION_INDEXES = cell(1, max(cvind));
-    for ic = unique(cvind)'
-        disp(sprintf('Permuting CV %d...', ic));
-        c = C(cvind==ic,:);
-        n = size(c,1);
-        if VERBOSE
-            fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
-            fprintf('First 10 rows of C, before shuffling.\n')
-            disp(c)
-        end
-        permix = randperm(n);
-        C(cvind==ic, :) = c(permix, :);
-        if VERBOSE
-            fprintf('First 10 rows of C, after shuffling.\n')
-            disp(c(permix,:))
+    fprintf('PermutationTest: %d\n', PermutationTest);
+    if PermutationTest
+        if RestrictPermutationByCV
+            C = permute_target(C, PermutationMethod, cvind);
+        else
+            C = permute_target(C, PermutationMethod);
         end
     end
+%     PERMUTATION_INDEXES = cell(1, max(cvind));
+%     for ic = unique(cvind)'
+%         disp(sprintf('Permuting CV %d...', ic));
+%         c = C(cvind==ic,:);
+%         n = size(c,1);
+%         if VERBOSE
+%             fprintf('Permuting %d rows of C, independently by its %d columns.\n', n, r);
+%             fprintf('First 10 rows of C, before shuffling.\n')
+%             disp(c)
+%         end
+%         permix = randperm(n);
+%         C(cvind==ic, :) = c(permix, :);
+%         if VERBOSE
+%             fprintf('First 10 rows of C, after shuffling.\n')
+%             disp(c(permix,:))
+%         end
+%     end
   end
 
   if VERBOSE
