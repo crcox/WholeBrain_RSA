@@ -11,3 +11,6 @@ demo/results.mat
 demo/params.json
 demo/shared/**
 src/proxSortedL1Mex.mexw64
+*.zip
+setup
+setup.sh
