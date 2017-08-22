@@ -14,3 +14,4 @@ src/proxSortedL1Mex.mexw64
 *.zip
 setup
 setup.sh
+*.swp

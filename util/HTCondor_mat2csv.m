@@ -44,6 +44,8 @@ function HTCondor_mat2csv(ResultDir, varargin)
         allFiles = dir(RESULT_DIR);
         allDirs  = allFiles([allFiles.isdir]);
         jobDirs  = SelectJobDirs(fullfile(RESULT_DIR,{allDirs.name}), PARAMS_FILE, SORT_JOBS);
+    else
+        jobDirs = fullfile(RESULT_DIR, jobDirs);
     end
     nJobDirs = numel(jobDirs);
 
