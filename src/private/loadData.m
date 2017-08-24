@@ -1,31 +1,20 @@
-function [X,subjix] = loadData(datafile,data_var,rowfilter,colfilter,metadata, FMT_subjid)
-    % Load data for multiple subjects, and apply filters.
-    datafile  = ascell(datafile);
-    rowfilter = ascell(rowfilter);
-    colfilter = ascell(colfilter);
-    N         = length(datafile);
-    subjix    = zeros(1,N);
+function X = loadData(datafiles, data_var)
+% LOADDATA Load example-by-feature matrices for multiple subjects.
+%
+% A simple function that allows the matrices to easily be loaded into a
+% arbitrarily named variable as a cell array in the workspace.
+%
+% datafiles : A cell array of paths to .mat files to load.
+% data_var  : The name of the specific variable from each .mat file. Assumes
+%             that variable will have the same name across datafiles.
+%
+% Chris Cox 24/08/2017
+    datafiles  = ascell(datafiles);
+    N         = length(datafiles);
     X         = cell(N,1);
     for i = 1:N
-        fprintf('Loading %s from  %s...\n', data_var, datafile{i});
-        if ischar(metadata(1).subject)
-            [~,subjcode,~] = fileparts(datafile{i});
-            z = strcmp({metadata.subject}, subjcode);
-            if any(z)
-                subjix(i) = find(z);
-            else
-                z = false(1,numel(metadata));
-                for j = 1:numel(metadata)
-                    n = length(metadata(j).subject);
-                    z(j) = strncmp(metadata(j).subject, subjcode, n);
-                end
-            end
-        else
-            subjid    = extractSubjectID(datafile{i}, FMT_subjid);
-            subjix(i) = find([metadata.subject] == subjid);
-        end
-        tmp       = load(datafile{i}, data_var);
+        fprintf('Loading %s from  %s...\n', data_var, datafiles{i});
+        tmp       = load(datafiles{i}, data_var);
         X{i}      = tmp.(data_var); clear tmp;
-        X{i}      = X{i}(rowfilter{subjix(i)},colfilter{subjix(i)});
     end
 end

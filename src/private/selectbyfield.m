@@ -15,7 +15,7 @@ function [s,ix] = selectbyfield(S, varargin)
     for i = 1:size(args,2)
         field = args{1, i};
         value = args{2, i};
-        if iscell(value) || numel(value) > 1
+        if iscell(value) || (~ischar(value) && numel(value) > 1)
             if ~iscell(value)
                 value = num2cell(value);
             end

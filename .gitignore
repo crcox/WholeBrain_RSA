@@ -15,3 +15,4 @@ src/proxSortedL1Mex.mexw64
 setup
 setup.sh
 *.swp
+*.asv

@@ -1,24 +1,51 @@
-function X = permute_target(C,method,cvind)
+function X = permute_target(C,method,arg)
     if ~iscell(C)
         C = {C};
     end
     if nargin < 2
         method = 'simple';
-    end 
-    if nargin < 3
         cvind = cell(size(C));
-    else
-        if ~iscell(cvind)
-            cvind = {cvind};
+        for i = 1:numel(C);
+            cvind{i} = ones(size(C{i},1),1);
         end
-    end
+        permix = [];
+    else
+        switch method
+            case {'simple', 'simulated'}
+                if nargin > 2
+                    error('crcox:ToManyArgs', 'The %s method does not accept any arguments.', method);
+                end
+                cvind = cell(size(C));
+                for i = 1:numel(C);
+                    cvind{i} = ones(size(C{i},1),1);
+                end
+                permix = [];
+            case 'stratified'
+                if nargin < 3
+                    error('crcox:ToFewArgs', 'The %s method requires an argument that specifies the cross validation structure.', method);
+                end
+                if iscell(arg);
+                    cvind = arg;
+                else
+                    cvind = {arg};
+                end
+                permix = [];
+            case 'manual'
+                if nargin < 3
+                    error('crcox:ToFewArgs', 'The %s method requires an argument that specifies the permutation index.', method);
+                end
+                cvind = cell(size(C));
+                for i = 1:numel(C);
+                    cvind{i} = ones(size(C{i},1),1);
+                end
+                permix = arg;
+        end
+    end 
+
     X = cell(size(C));
     for i = 1:numel(C)
         if size(C{i},1) == 1
             C{i} = C{i}';
-        end
-        if isempty(cvind{i})
-            cvind{i} = ones(size(C{i},1),1);
         end
 %         if strcmp('stratified', method)
 %             % Done here so it's not recomputed for each holdout.
@@ -36,6 +63,8 @@ function X = permute_target(C,method,cvind)
                     X{i}(cvind{i}==ic,:) = stratified_perm(y, g);
                 case 'simulated'
                     X{i}(cvind{i}==ic,:) = simulated(y);
+                case 'manual'
+                    X{i} = manual(y, permix);
             end
         end
     end
@@ -67,4 +96,8 @@ end
 function x = simulated(y)
 % Simulates a new y based on its mean and covariance.
     x = mvnrnd(mean(y), cov(y), size(y,1));
+end
+
+function x = manual(y, permix)
+    x = y(permix, :);
 end
