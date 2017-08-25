@@ -243,7 +243,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
                                     Uz = pinv(Vt)*Ct;
                                     info = struct();
                                 else
-                                    [Uz, info] = Adlas1(Vt, Ct, lam1, options);
+                                    [Uz, info] = Adlas1(Vt, Ct, lam, options);
                                 end
 
                             case 'GROWL'
@@ -361,6 +361,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
 
                     if strcmp(upper(regularization), 'L1L2_GLMNET')
                         results(iii).iter = info.npasses;
+                        info.iter = info.npasses;
                     else
                         results(iii).iter = info.iter;
                     end
@@ -372,6 +373,9 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
                     end
                     if isempty(lambda1)
                         lambda1_k = nan;
+                        if strcmp(upper(regularization), 'L1L2_GLMNET')
+                            lambda1_k = info.lambda;
+                        end
                     else
                         lambda1_k = lambda1(k);
                     end

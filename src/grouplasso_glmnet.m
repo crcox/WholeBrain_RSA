@@ -76,4 +76,6 @@ function [U, obj] = grouplasso_glmnet(X, Y, alpha, lambda, varargin)
     if numel(U) == 1
         U = U{1};
     end
+    obj.message = '';
+    
 end

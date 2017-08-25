@@ -296,7 +296,7 @@ function WholeBrain_RSA(varargin)
 
             % Preallocate
             if isempty(lambda); nlam = 1; else nlam = numel(lamba); end
-            if isempty(lambda); nlam1 = 1; else nlam1 = numel(lambda1); end
+            if isempty(lambda1); nlam1 = 1; else nlam1 = numel(lambda1); end
             results(numel(cvset)*nlam*nlam1).Uz = [];
 
             for iVolume = 1:size(meta.voxelsToNeighbours,1)
@@ -550,21 +550,21 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
             
         case 'L1L2_GLMNET'
             if isempty(lambda)
-                warning('Lamba1 was not specified. GLMnet will attempt to determine lambda1 through cross validation.');
-                lam1 = nan(1);
+                warning('Lamba was not specified. GLMnet will attempt to determine lambda1 through cross validation.');
+                lam = nan(1);
             else
-                lam1    = lambda1;
+                lam    = lambda;
             end
-            lam   = lambda;
+            lam1   = [];
             lamSeq = [];
 
         case 'L1L2'
             if ~isempty(lambda)
-                warning('Group Lasso does not use the lambda parameter. It is being ignored.');
+                warning('Group Lasso does not use the lambda1 parameter. It is being ignored.');
             end
-            assert(~isempty(lambda1)   , 'Group Lasso requires lambda1.');
-            lam    = [];
-            lam1   = lambda1;
+            assert(~isempty(lambda)   , 'Group Lasso requires lambda.');
+            lam    = lambda;
+            lam1   = [];
             lamSeq = [];
 
         case 'GROWL'
