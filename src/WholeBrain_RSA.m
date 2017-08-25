@@ -208,7 +208,9 @@ function WholeBrain_RSA(varargin)
         COORDS_FIELDS = fieldnames(COORDS);
         for j = 1:numel(COORDS_FIELDS)
             cfield = COORDS_FIELDS{j};
-            if any(strcmp(cfield, {'ind','ijk','xyz'})) && ~isempty(COORDS.(cfield))
+            if any(strcmp(cfield, {'ijk','xyz'})) && ~isempty(COORDS.(cfield))
+                COORDS.(cfield) = COORDS.(cfield)(colfilter{i},:);
+            elseif any(strcmp(cfield, {'ind'})) && ~isempty(COORDS.(cfield))
                 COORDS.(cfield) = COORDS.(cfield)(colfilter{i});
             end
         end
@@ -478,16 +480,24 @@ function WholeBrain_RSA(varargin)
                 else
                     ix = results(iResult).Uix;
                 end
-                for i = 1:numel(COORDS_FIELDS)
-                    cfield = COORDS_FIELDS{i};
-                    switch cfield
-                        case 'ind'
-                            tmpind = COORDS.ind(ix);
-                            results(iResult).coords.ind = tmpind(:)'; % When writing to JSON, much more efficient as row vector.
-                        case 'ijk'
-                            results(iResult).coords.ijk = COORDS.ijk(ix,:);
-                        case 'xyz'
-                            results(iResult).coords.xyz = COORDS.xyz(ix,:);
+%                 for i = 1:numel(COORDS_FIELDS)
+%                     cfield = COORDS_FIELDS{i};
+%                     switch cfield
+%                         case 'ind'
+%                             tmpind = COORDS.ind(ix);
+%                             results(iResult).coords.ind = tmpind(:)'; % When writing to JSON, much more efficient as row vector.
+%                         case 'ijk'
+%                             results(iResult).coords.ijk = COORDS.ijk(ix,:);
+%                         case 'xyz'
+%                             results(iResult).coords.xyz = COORDS.xyz(ix,:);
+%                     end
+%                 end
+                for j = 1:numel(COORDS_FIELDS)
+                    cfield = COORDS_FIELDS{j};
+                    if any(strcmp(cfield, {'ijk','xyz'})) && ~isempty(COORDS.(cfield))
+                        results(iResult).coords.(cfield) = COORDS.(cfield)(ix,:);
+                    elseif any(strcmp(cfield, {'ind'})) && ~isempty(COORDS.(cfield))
+                        results(iResult).coords.(cfield) = COORDS.(cfield)(ix);
                     end
                 end
             end
@@ -540,10 +550,12 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
             
         case 'L1L2_GLMNET'
             if isempty(lambda)
-                warning('Lamba was not specified. GLMnet will attempt to determine lambda through cross validation.');
+                warning('Lamba1 was not specified. GLMnet will attempt to determine lambda1 through cross validation.');
+                lam1 = nan(1);
+            else
+                lam1    = lambda1;
             end
-            lam    = lambda;
-            lam1   = lambda1;
+            lam   = lambda;
             lamSeq = [];
 
         case 'L1L2'

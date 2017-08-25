@@ -24,7 +24,7 @@ function [U, obj] = grouplasso_glmnet(X, Y, alpha, lambda, varargin)
     tol       = p.Results.tol;
     U0        = p.Results.U0;
     CVIND     = p.Results.cvind;
-    PARALLEL   = p.Results.PARALLEL;
+    PARALLEL  = p.Results.PARALLEL;
     verbose   = p.Results.verbose;
 
     if ~iscell(X)
@@ -43,12 +43,8 @@ function [U, obj] = grouplasso_glmnet(X, Y, alpha, lambda, varargin)
         y = Y{iSubj};
 
         cvind = CVIND{iSubj};
-        cvset = unique(cvind);
+        cvset = unique(sort(cvind));
         nfold = numel(cvset);
-
-        cinds = unique(y);
-        cinds = cinds(:)'; % force to row vec
-        m = numel(cinds);
 
         performanceMetric = 'mse';
         modelType = 'mgaussian';
@@ -64,16 +60,20 @@ function [U, obj] = grouplasso_glmnet(X, Y, alpha, lambda, varargin)
             end
         end
         if isnan(lambda)
-            opts = glmnetSet(struct('intr',bias,'thresh', tol, 'weights', U0, 'alpha', alpha, 'lambda', []));
+            opts = glmnetSet(struct('intr',bias,'thresh', tol, 'weights', U0, 'alpha', alpha, 'lambda', [], 'standardize', 0));
             objcv = cvglmnet(x,y,modelType,opts,performanceMetric,nfold,cvind',PARALLEL);
             lambda = objcv.lambda_min;
         end
-        opts = glmnetSet(struct('intr',bias,'thresh', tol, 'weights', U0, 'alpha', alpha, 'lambda', lambda));
+        opts = glmnetSet(struct('intr',bias,'thresh', tol, 'weights', U0, 'alpha', alpha, 'lambda', lambda, 'standardize', 0));
         obj(iSubj) = glmnet(x,y,modelType,opts);
         if iscell(obj(iSubj).beta)
             U{iSubj} = cell2mat(obj(iSubj).beta);
         else
             U{iSubj} = obj(iSubj).beta;
         end
+    end
+    
+    if numel(U) == 1
+        U = U{1};
     end
 end

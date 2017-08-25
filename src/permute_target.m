@@ -1,4 +1,7 @@
 function X = permute_target(C,method,arg)
+% PERMUTE_TARGET Needs documentation
+%
+% Chris Cox 25/08/2017
     if ~iscell(C)
         C = {C};
     end
