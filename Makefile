@@ -10,7 +10,7 @@ JSON=$(DEP)/jsonlab
 SIMITAR=$(DEP)/simitar-rsa
 MRI_TOOLS=$(DEP)/mri_coordinate_tools
 INCL= -I $(SRC) -I $(JSON) -I $(SIMITAR) -I $(MRI_TOOLS)
-.PHONEY: all clean-all clean-simitar clean-postbuild simiart sdist
+.PHONEY: all clean-all clean-simitar clean-postbuild simitar sdist
 
 all: setup simitar WholeBrain_RSA clean-postbuild
 
