@@ -145,7 +145,6 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
                     C = permute_target(C, PermutationMethod, pix);
             end
         end
-
     end
 
     if VERBOSE

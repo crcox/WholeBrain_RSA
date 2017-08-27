@@ -71,7 +71,7 @@ function X = permute_target(C,method,arg)
             end
         end
     end
-    if iscell(X) && numel(X) == 1
+    if iscell(X) && numel(X) == 1 && ~iscell(C);
         X = X{1};
     end
 end
