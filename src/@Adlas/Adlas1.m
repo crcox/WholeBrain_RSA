@@ -46,7 +46,7 @@ function [X,info,InfeasibilityMatrix] = Adlas1(A,B,lambda,options)
     % -------------------------------------------------------------
     if (nargin <  4), options = struct(); end;
 
-    iterations    = getDefaultField(options,'iterations',100000);
+    max_iter    = getDefaultField(options,'iterations',100000);
     %   miniterations = getDefaultField(options,'miniterations',0);
     verbosity     = getDefaultField(options,'verbosity',0);
     fid           = getDefaultField(options,'fid',1);
@@ -66,7 +66,7 @@ function [X,info,InfeasibilityMatrix] = Adlas1(A,B,lambda,options)
         error('Lambda must have at least one nonnegative entry.');
     end
     if nargout > 2
-        InfeasibilityMatrix = zeros(iterations, 4);
+        InfeasibilityMatrix = zeros(max_iter, 4);
     end
 
     % -------------------------------------------------------------
@@ -193,7 +193,7 @@ function [X,info,InfeasibilityMatrix] = Adlas1(A,B,lambda,options)
 
         % Stopping criteria
         if (status == 0)
-            if (iter >= iterations)
+            if (iter >= max_iter)
                 status = STATUS_ITERATIONS;
             end
         end
