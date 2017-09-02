@@ -1,4 +1,4 @@
-function [results,info] = learn_similarity_encoding(S, V, regularization, target_type, varargin)
+function [results,AdlasInstances] = learn_similarity_encoding(S, V, regularization, target_type, varargin)
     % Local Constants:
     % ---------------
     GLMNET_ALPHA_LASSO = 1;
@@ -25,7 +25,7 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     addParameter(p , 'SmallFootprint'          , false    );
     addParameter(p , 'Verbose'                 , true     );
     addParameter(p , 'PARALLEL'                , false    );
-    addParameter(p , 'WarmstartStruct'         , []       );
+    addParameter(p , 'AdlasInstances'          , []       );
     parse(p, S, V, regularization, target_type, varargin{:});
 
     S                       = p.Results.S;
@@ -48,7 +48,6 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
     SMALL                   = p.Results.SmallFootprint;
     VERBOSE                 = p.Results.Verbose;
     PARALLEL                = p.Results.PARALLEL;
-    WarmstartStruct         = p.Results.WarmstartStruct;
 
     if strcmp(regularization, {'grOWL','grOWL2'});
         assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
@@ -97,7 +96,14 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
         'iter'           , [] );
 
     % Preallocate
-    results(numel(cvset)*nlam1*nlam).Uz = [];
+    N = numel(cvset)*nlam1*nlam;
+    results(N).Uz = [];
+
+    if isempty(p.Results.AdlasInstances)
+        AdlasInstances = cell(N,1);
+    else
+        AdlasInstances = p.Results.AdlasInstances;
+    end
 
     %square root
     for i = 1:numel(S)
@@ -244,11 +250,12 @@ function [results,info] = learn_similarity_encoding(S, V, regularization, target
                                     Uz = pinv(Vt)*Ct;
                                     info = struct();
                                 else
-                                    if ~isempty(WarmstartStruct)
-                                        WS = selectbyfield(WarmstartStruct, 'subject', subix, 'cvholdout', icv, 'lambda', lam);
-                                        options.Xinit = WS.Xinit;
+                                    if isempty(AdlasInstances{iii})
+                                        AdlasInstances{iii} = Adlas(Vt, Ct, lam, options);
                                     end
-                                    [Uz, info] = Adlas1(Vt, Ct, lam, options);
+                                    AdlasInstances{iii} = AdlasInstances{iii}.train(options);
+                                    Uz = AdlasInstances{iii}.X;
+                                    info = AdlasInstances{iii};
                                 end
 
                             case 'GROWL'

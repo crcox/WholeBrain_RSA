@@ -7,7 +7,6 @@ classdef Adlas
         B
         lambda
         X % model weights
-        xInit
         max_iter = 100000
         fid = 1
         optimIter = 1
@@ -45,6 +44,7 @@ classdef Adlas
                 error('Lambda must have at least one nonnegative entry.');
             end
             obj.lambda = lambda;
+            fn = fieldnames(opts);
             for i = 1:numel(fn)
                 obj.(fn{i}) = opts.(fn{i});
             end
@@ -53,10 +53,10 @@ classdef Adlas
             obj.s = RandStream('mt19937ar','Seed',0);
             obj.L = 1;
             if ~isfield(opts, 'xInit') || (isempty(opts.xInit))
-                xInit = zeros(obj.n,obj.r);
+                obj.X = zeros(obj.n,obj.r);
             end
         end
-        function obj = train(opts)
+        function obj = train(obj, opts)
             fn = fieldnames(opts);
             for i = 1:numel(fn)
                 obj.(fn{i}) = opts.(fn{i});
@@ -66,7 +66,7 @@ classdef Adlas
     end
 end
 
-function obj = Adlas1(obj)
+function obj = Adlas1(obj, verbosity)
     % Constants for exit status
     STATUS_RUNNING    = 0;
     STATUS_OPTIMAL    = 1;
@@ -74,14 +74,22 @@ function obj = Adlas1(obj)
     STATUS_ALLZERO    = 3;
     STATUS_MSG = {'Optimal','Iteration limit reached','All weights set to zero'};
 
+    if nargin < 2
+        verbosity = 0;
+    end
     % Initialize parameters
-    X       = obj.xInit;
+    X       = obj.X;
+    A       = obj.A;
+    B       = obj.B;
+    Ax      = A * X;
     Y       = X;
-    Ax      = obj.A * X;
     status  = STATUS_RUNNING;
 
+    tolInfeas = obj.tolInfeas;
+    tolRelGap = obj.tolRelGap;
+
     % Deal with Lasso case
-    modeLasso = (numel(lambda) == 1);
+    modeLasso = (numel(obj.lambda) == 1);
     if (modeLasso)
         proxFunction = @(v1,v2) proxL1L2(v1,v2);
     else
@@ -98,7 +106,7 @@ function obj = Adlas1(obj)
     while (true)
 
         % Compute the gradient at f(y)
-        if (mod(obj.iter,gradIter) == 0) % Includes first iterations
+        if (mod(obj.iter,obj.gradIter) == 0) % Includes first iterations
             r = A*Y - B;
             g = A'*(A*Y-B);
             f = trace(r'*r) / 2;
@@ -112,34 +120,34 @@ function obj = Adlas1(obj)
         obj.iter = obj.iter + 1;
 
         % Check optimality conditions
-        if ((mod(obj.iter,optimIter) == 0))
+        if ((mod(obj.iter,obj.optimIter) == 0))
             % Compute 'dual', check infeasibility and gap
             if (modeLasso)
                 gs = sqrt(sum(g.^2,2));
                 ys = sqrt(sum(Y.^2,2));
 
-                infeas = max(norm(gs,inf)-lambda,0);
+                infeas = max(norm(gs,inf)-obj.lambda,0);
 
-                objPrimal = f + lambda*norm(ys,1);
+                objPrimal = f + obj.lambda*norm(ys,1);
                 objDual   = -f - trace(r'*B);
             else
                 gs     = sort(sqrt(sum(g.^2,2)),'descend');
                 ys     = sort(sqrt(sum(Y.^2,2)),'descend');
-                infeas = max(max(cumsum(gs-lambda)),0);
+                infeas = max(max(cumsum(gs-obj.lambda)),0);
 
                 % Compute primal and dual objective
-                objPrimal =  f + lambda'*ys;
+                objPrimal =  f + obj.lambda'*ys;
                 objDual  = -f - trace(r'*B);
             end
 
             % Format string
             if (verbosity > 0)
-                str = sprintf(' %9.2e  %9.2e  %9.2e',objPrimal - objDual, infeas/lambda(1), abs(objPrimal - objDual) / max(1,objPrimal));
+                str = sprintf(' %9.2e  %9.2e  %9.2e',objPrimal - objDual, infeas/obj.lambda(1), abs(objPrimal - objDual) / max(1,objPrimal));
             end
 
             % Check primal-dual gap
             if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
-                    (infeas < tolInfeas * lambda(1)) )
+                    (infeas < tolInfeas * obj.lambda(1)) )
                 status = STATUS_OPTIMAL;
             end
 
@@ -149,14 +157,14 @@ function obj = Adlas1(obj)
 
         if (verbosity > 0)
             if ((verbosity == 2) || ...
-                    ((verbosity == 1) && (mod(obj.iter,optimIter) == 0)))
+                    ((verbosity == 1) && (mod(obj.iter,obj.optimIter) == 0)))
                 fprintf(fid,'%5d  %9.2e%s\n', obj.iter,f,str);
             end
         end
 
         % Stopping criteria
         if (status == 0)
-            if (obj.iter >= max_iter)
+            if (obj.iter >= obj.max_iter)
                 status = STATUS_ITERATIONS;
             end
         end
@@ -177,7 +185,7 @@ function obj = Adlas1(obj)
         % Lipschitz search
         while (obj.L < inf)
             % Compute prox mapping
-            X = proxFunction(Y - (1/obj.L)*g, lambda/obj.L);
+            X = proxFunction(Y - (1/obj.L)*g, obj.lambda/obj.L);
             d = X - Y;
 
             Ax = A*X;%A1*vec(X);
@@ -212,7 +220,7 @@ function obj = Adlas1(obj)
     obj.infeas    = infeas;
     obj.status    = status;
     obj.message   = STATUS_MSG{status};
-    obj.Aprods   = obj.Aprods + ceil(obj.iter / gradIter);
+    obj.Aprods   = obj.Aprods + ceil(obj.iter / obj.gradIter);
 end
 
 function x = proxL1L2(Y,lambda)

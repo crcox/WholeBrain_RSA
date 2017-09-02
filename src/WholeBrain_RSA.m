@@ -450,14 +450,15 @@ function WholeBrain_RSA(varargin)
                     s = numel(n) - BRACKETS.s;
                     n = n{s};
                     r = r{s};
+                    AdlasInstances = [];
                     for i = 1:numel(n)
                         lambda = lambda(1:n(i));
-                        opts.iterations = r(i) * 1000;
-                        if ~isempty(WarmstartStruct)
-                            z = ismember([WarmstartStruct.lambda], lambda);
-                            WarmstartStruct = WarmstartStruct(z);
+                        opts.max_iter = r(i) * 1000;
+                        if ~isempty(AdlasInstances)
+                            z = ismember([AdlasInstances.lambda], lambda);
+                            AdlasInstances = AdlasInstances(z);
                         end
-                        [results,info] = learn_similarity_encoding(S, X, regularization, target_type,...
+                        [results,AdlasInstances] = learn_similarity_encoding(S, X, regularization, target_type,...
                             'tau'            , tau            , ...
                             'lambda'         , lambda        , ...
                             'cvind'          , cvind          , ...
@@ -470,7 +471,7 @@ function WholeBrain_RSA(varargin)
                             'RestrictPermutationByCV', RestrictPermutationByCV, ...
                             'SmallFootprint' , SmallFootprint , ...
                             'AdlasOpts'      , opts, ...
-                            'WarmstartStruct', WarmstartStruct);
+                            'AdlasInstances' , AdlasInstances);
 
                         err1 = zeros(n(i), 1);
                         for j = 1:numel(lambda)
@@ -478,14 +479,6 @@ function WholeBrain_RSA(varargin)
                         end
                         [~,ix] = sort(err1);
                         lambda = lambda(ix);
-                        fn = fieldnames(results);
-                        z = ~ismember(fn, {'subject','cvholdout','lambda'});
-                        fn = fn(z);
-                        WarmstartStruct = rmfield(results, fn);
-                        for j = 1:numel(results)
-                            WarmstartStruct(j).Xinit = zeros(results(j).nvox, size(results(j).Cz,2));
-                            WarmstartStruct(j).Xinit(results(j).Uix, :) = results(j).Uz;
-                        end
                     end
                 end
 
