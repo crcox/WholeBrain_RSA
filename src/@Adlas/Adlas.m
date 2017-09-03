@@ -28,10 +28,19 @@ classdef Adlas
         infeas
         Aprods
     end
+    properties ( Access = private, Hidden = true )
+        EMPTY = 0;
+        tPrev
+        AxPrev
+    end
 
     methods
         function obj = Adlas(A,B,lambda,opts)
-            if (nargin <  4), opts = struct(); end;
+            if (nargin == 0)
+                obj.EMPTY = 1;
+                return
+            end
+            if (nargin <  4), opts = struct(); end
             obj.A = A;
             obj.B = B;
             % Ensure that lambda is non-increasing
@@ -55,6 +64,7 @@ classdef Adlas
             if ~isfield(opts, 'xInit') || (isempty(opts.xInit))
                 obj.X = zeros(obj.n,obj.r);
             end
+            obj.EMPTY = 0;
         end
         function obj = train(obj, opts)
             fn = fieldnames(opts);
@@ -62,6 +72,9 @@ classdef Adlas
                 obj.(fn{i}) = opts.(fn{i});
             end
             obj = Adlas1(obj);
+        end
+        function x = isempty(obj)
+            x = all([obj.EMPTY] == 1);
         end
     end
 end
@@ -111,7 +124,7 @@ function obj = Adlas1(obj, verbosity)
             g = A'*(A*Y-B);
             f = trace(r'*r) / 2;
         else
-            r = (Ax + ((tPrev - 1) / obj.t) * (Ax - AxPrev)) - B;
+            r = (Ax + ((obj.tPrev - 1) / obj.t) * (Ax - obj.AxPrev)) - B;
             g = A'*(A*Y-B);
             f = trace(r'*r) / 2;
         end
@@ -177,10 +190,10 @@ function obj = Adlas1(obj, verbosity)
         end
 
         % Keep copies of previous values
-        AxPrev = Ax;
+        obj.AxPrev = Ax;
         xPrev  = X;
         fPrev  = f;
-        tPrev  = obj.t;
+        obj.tPrev  = obj.t;
 
         % Lipschitz search
         while (obj.L < inf)
@@ -204,7 +217,7 @@ function obj = Adlas1(obj, verbosity)
 
         % Update
         obj.t = (1 + sqrt(1 + 4*obj.t^2)) / 2;
-        Y = X + ((tPrev - 1) / obj.t) * (X - xPrev);
+        Y = X + ((obj.tPrev - 1) / obj.t) * (X - xPrev);
 
         % Check is all weights set to zero
         if all(Y(:)==0) && obj.iter > 100

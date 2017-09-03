@@ -100,7 +100,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(S, V, regularizati
     results(N).Uz = [];
 
     if isempty(p.Results.AdlasInstances)
-        AdlasInstances = cell(N,1);
+        AdlasInstances = repmat(Adlas,N,1);
     else
         AdlasInstances = p.Results.AdlasInstances;
     end
@@ -250,12 +250,12 @@ function [results,AdlasInstances] = learn_similarity_encoding(S, V, regularizati
                                     Uz = pinv(Vt)*Ct;
                                     info = struct();
                                 else
-                                    if isempty(AdlasInstances{iii})
-                                        AdlasInstances{iii} = Adlas(Vt, Ct, lam, options);
+                                    if isempty(AdlasInstances(iii))
+                                        AdlasInstances(iii) = Adlas(Vt, Ct, lam, options);
                                     end
-                                    AdlasInstances{iii} = AdlasInstances{iii}.train(options);
-                                    Uz = AdlasInstances{iii}.X;
-                                    info = AdlasInstances{iii};
+                                    AdlasInstances(iii) = AdlasInstances(iii).train(options);
+                                    Uz = AdlasInstances(iii).X;
+                                    info = AdlasInstances(iii);
                                 end
 
                             case 'GROWL'
