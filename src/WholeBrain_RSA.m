@@ -445,11 +445,11 @@ function WholeBrain_RSA(varargin)
                         'SmallFootprint' , SmallFootprint , ...
                         'AdlasOpts'      , opts);
                 else
-                    WarmstartStruct = [];
-                    [n, r] = hyperband_cfg(HYPERBAND.budget, HYPERBAND.aggressiveness);
-                    s = numel(n) - BRACKETS.s;
-                    n = n{s};
-                    r = r{s};
+%                     [n, r] = hyperband_cfg(HYPERBAND.budget, HYPERBAND.aggressiveness);
+%                     s_max = floor((log(HYPERBAND.budget)/log(HYPERBAND.aggressiveness)) + 1);
+%                     s = s_max - BRACKETS.s;
+                    n = BRACKETS.n;
+                    r = BRACKETS.r;
                     AdlasInstances = [];
                     for i = 1:numel(n)
                         lambda = lambda(1:n(i));
