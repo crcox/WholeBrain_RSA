@@ -223,9 +223,14 @@ function WholeBrain_RSA(varargin)
         metadata(i).coords = COORDS;
     end
     xyz = COORDS.xyz;
-    fprintf('Initial dimensions: (%d,%d)\n', numel(rowfilter), numel(colfilter));
-    fprintf('Filtered dimensions: (%d,%d)\n', size(X,1), size(X,2));
-
+    fprintf('Data Dimensions\n');
+    fprintf('%16s%16s%16s\n','subject','initial','filtered');
+    fprintf('%s\n',repmat('-',1,16*3));
+    for ii = 1:N
+        fprintf('%16d (%6d,%6d) (%6d,%6d)\n',subjix(ii),numel(rowfilter{ii}),numel(colfilter{ii}),size(X{ii},1),size(X{ii},2));
+    end
+    fprintf('\n');
+    
     %% Report whether a bias unit will be included
     fprintf('%-28s', 'Including Bias Unit:');
     msg = 'NO';
