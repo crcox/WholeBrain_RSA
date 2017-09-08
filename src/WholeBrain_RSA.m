@@ -266,44 +266,42 @@ function WholeBrain_RSA(varargin)
         end
     end
 
+    % Note on randomization for permutation
+    % -------------------------------------
+    % A required argument when specifying permutations is a list of
+    % "RandomSeeds". These are applied near the beginning of the
+    % program (within WholeBrain_RSA), to seed the random number
+    % generator.
+    %
+    % If the PermutationMethod is 'manual', then the RandomSeed has a
+    % different (additional) function. It will be used to index into
+    % the columns of a n x p matrix, generated in advance, that
+    % contains the indexes to generate p unique permutations.
+    %
+    % In this case, the matrix should stored in a variable named
+    % PERMUTATION_INDEXES, contained within a file named
+    % PERMUTATION_INDEXES.mat
+    fprintf('PermutationTest: %d\n', PermutationTest);
     if PermutationTest
-        % Note on randomization for permutation
-        % -------------------------------------
-        % A required argument when specifying permutations is a list of
-        % "RandomSeeds". These are applied near the beginning of the
-        % program (within WholeBrain_RSA), to seed the random number
-        % generator.
-        %
-        % If the PermutationMethod is 'manual', then the RandomSeed has a
-        % different (additional) function. It will be used to index into
-        % the columns of a n x p matrix, generated in advance, that
-        % contains the indexes to generate p unique permutations.
-        %
-        % In this case, the matrix should stored in a variable named
-        % PERMUTATION_INDEXES, contained within a file named
-        % PERMUTATION_INDEXES.mat
-        fprintf('PermutationTest: %d\n', PermutationTest);
-        if PermutationTest
-            switch PermutationMethod
+        switch PermutationMethod
 %                 case 'simple'
 %                     if RestrictPermutationByCV
 %                         C = permute_target(C, PermutationMethod, cvind);
 %                     else
 %                         C = permute_target(C, PermutationMethod);
 %                     end
-                case 'manual'
-                    load(PermutationIndex, 'PERMUTATION_INDEX');
-                    for i = 1:numel(C)
-                        PERMUTATION_INDEX{i} = PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed);
-                    end
-                otherwise
-                    error('crcox:NotImplemented', 'Permutations need to be specified manually.');
-            end
-        else
-            PERMUTATION_INDEX = cell(size(C));
-            for i = 1:numel(C)
-                PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
-            end
+            case 'manual'
+                load(PermutationIndex, 'PERMUTATION_INDEX');
+                for i = 1:numel(C)
+                    PERMUTATION_INDEX{i} = PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed);
+                end
+            otherwise
+                error('crcox:NotImplemented', 'Permutations need to be specified manually.');
+        end
+    else
+        PERMUTATION_INDEX = cell(size(C));
+        for i = 1:numel(C)
+            PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
         end
     end
 
