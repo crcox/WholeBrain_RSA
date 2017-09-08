@@ -68,6 +68,7 @@ function X = permute_target(C,method,arg)
                     X{i}(cvind{i}==ic,:) = simulated(y);
                 case 'manual'
                     X{i} = manual(y, permix);
+                    break % Don't need the CV loop for this method
             end
         end
     end
@@ -82,7 +83,7 @@ function x = simple_perm(y)
     x = y(permix, :);
 end
 
-function x = stratified_perm(y, g)
+function [x,ix] = stratified_perm(y, g)
 % Stratified permuation involves permuting within each category, so that
 % each category member is equally likely to be reassigned to each other
 % group. Another way to put it is that the permuted result will be as close
@@ -93,14 +94,16 @@ function x = stratified_perm(y, g)
 % This is not implemented (yet?) because it make less intuitive sense when
 % the targets are continuous and not fundamentally categorical.
     warning('stratified permutation is not implemented yet. Doing simple permutation instead...');
-    x = simple_perm(y);
+    [x,ix] = simple_perm(y);
 end
 
-function x = simulated(y)
+function [x,ix] = simulated(y)
 % Simulates a new y based on its mean and covariance.
     x = mvnrnd(mean(y), cov(y), size(y,1));
+    ix = nan(1);
 end
 
-function x = manual(y, permix)
-    x = y(permix, :);
+function [x,ix] = manual(y, permix)
+    ix = permix;
+    x = y(ix, :);
 end
