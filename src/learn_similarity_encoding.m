@@ -1,4 +1,12 @@
 function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularization, target_type, varargin)
+% TO DO:
+% Currently, the function can only handle a single subject. It will also
+% only support HYPERBAND for a single hyperparameter, meaning that it can
+% only do group lasso. This is because the function was originally written
+% to facilitate grid search, and with HYPERBAND the hyperparameters should
+% be be "crossed" in the same way. With HYPERBAND, configurations can be
+% crossed with subject and cvholdout, and probably permutation index.
+
     % Local Constants:
     % ---------------
     GLMNET_ALPHA_LASSO = 1;
@@ -26,6 +34,12 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
     addParameter(p , 'AdlasInstances'          , []       );
     parse(p, C, V, regularization, target_type, varargin{:});
 
+    if numel(p.Results.V) > 1
+        error('crcox:TooManySubjects', 'Each call to "learn_similarity_encoding" currently supports only a single subject.')
+    end
+    if numel(p.Results.lambda) == numel(p.Results.lambda1)
+        warning('crcox:NotImplemented', 'Note that HYPERBAND is not yet implemented for GrOWL. Lambda and Lambda1 will be crossed, as if grid searching.');
+    end
     C                       = p.Results.C;
     V                       = p.Results.V;
     regularization          = p.Results.regularization;
@@ -107,13 +121,15 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
     iii = 0; % index into 1-D results structure.
     for subix = 1:numel(Vorig)
         for permix = 1:nperm
+            %  This is kind of a hack to handle the fact that outlying rows
+            %  and rows belonging to the final holdout set will have already been eliminated.
             permutation_index = permutations{subix}(:,permix);
             for i = 1:ncv
                 icv = cvset(i);
                 test_set  = cvind{subix}==icv;
                 train_set = ~test_set;
 
-                V = Vorig{subix}(permutation_index, :);
+                V = Vorig{subix};
 
                 % normalize
                 switch lower(normalize)
@@ -155,8 +171,14 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
 
                 [~,d] = size(V);
 
-                Ct = C{subix}(train_set,:);
-                Ch = C{subix}(test_set,:);
+                Cp = C{subix}(permutation_index,:);
+                % cpcr = zeros(1,size(Cp,2));
+                % for k = 1:size(Cp, 2);
+                %     cpcr(k) = corr(Cp(:,k),C{subix}(:,k));
+                % end
+                % disp(cpcr);
+                Ct = Cp(train_set,:);
+                Ch = Cp(test_set,:);
                 Vt = V(train_set,:);
                 Vh = V(test_set,:);
 

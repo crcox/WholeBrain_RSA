@@ -293,7 +293,12 @@ function WholeBrain_RSA(varargin)
             case 'manual'
                 load(PermutationIndex, 'PERMUTATION_INDEX');
                 for i = 1:numel(C)
-                    PERMUTATION_INDEX{i} = PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed);
+                    %  This is kind of a hack to handle the fact eliminating
+                    %  outlying rows and rows belonging to the final holdout
+                    %  set will create gaps in the index.
+                    [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed));
+                    [~, permutation_index] = sort(ix);
+                    PERMUTATION_INDEX{i} = permutation_index;
                 end
             otherwise
                 error('crcox:NotImplemented', 'Permutations need to be specified manually.');

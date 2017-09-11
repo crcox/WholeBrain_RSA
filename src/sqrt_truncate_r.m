@@ -12,11 +12,11 @@ function [C, r] = sqrt_truncate_r(S, tau)
     n = size(U,2);
 
     if tau > 1 && (tau - floor(tau)) < 1e-6
-        fprintf('Selecting a %d dimensional embedding, treating whole-valued tau > 1 as r.',  tau);
+        fprintf('Selecting a %d dimensional embedding, treating whole-valued tau > 1 as r.\n',  tau);
         r = tau;
         C = U(:,1:r)*diag(sqrt(z(1:r)));
     else
-        fprintf('Picking r such that (norm(S-C*C'',''fro'')/norm(S,''fro'')) <= tau (where tau=%0.2f) ...',  tau);
+        fprintf('Picking r such that (norm(S-C*C'',''fro'')/norm(S,''fro'')) <= tau (where tau=%0.2f) ...\n',  tau);
         for r = 1:n
             C = U(:,1:r)*diag(sqrt(z(1:r)));
             objfunc = (norm(S-C*C','fro')/norm(S,'fro'));
