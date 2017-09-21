@@ -76,7 +76,8 @@ function HTCondor_mat2csv(ResultDir, varargin)
     if ~isempty(INCLUDE) && isempty(SKIP)
         SKIP = fieldnames(rmfield(R,INCLUDE));
     end
-    R = rmfield(R, SKIP);
+    z = ismember(SKIP,fieldnames(R));
+    R = rmfield(R, SKIP(z));
     [fmt,fmt_h] = fieldfmt(fieldnames(R));
 
     fid = fopen(OUTPUT_FILE, 'w');
@@ -95,12 +96,21 @@ function HTCondor_mat2csv(ResultDir, varargin)
         rfile  = fullfile(jobDir,RESULT_FILE);
         if exist(rfile, 'file') && exist(pfile, 'file')
             r = load(rfile, 'results');
-            R = rmfield(r.results, SKIP);
+            z = ismember(SKIP,fieldnames(r.results));
+            R = rmfield(r.results, SKIP(z));
             if isfield(R,'iterations')
                 for ii = 1:numel(R)
                     R(ii).iterations = numel(R(ii).iterations);
                 end
             end
+            if isfield(R,'RandomSeed')
+                for ii = 1:numel(R)
+                    if (numel(R(ii).RandomSeed) > numel(R(ii).err1)) && (numel(R(ii).RandomSeed) == numel(R))
+                        R(ii).RandomSeed = R(ii).RandomSeed(ii);
+                    end
+                end
+            end
+            % BeyondMagnitude Hack
             if isfield(R,'subject')
                 for ii = 1:numel(R)
                     if ischar(R(ii).subject);
@@ -117,11 +127,12 @@ function HTCondor_mat2csv(ResultDir, varargin)
                         xc{k} = double(rc(k,j));
                     end
                 end
+%                 fprintf(fmt, xc{:})
                 fprintf(fid, fmt, xc{:});
             end
         end
     end
-    fprintf('\n');
+%     fprintf('\n');
     fclose(fid);
 end
 function jobDirs = SelectJobDirs(dirs, paramsFile, sort)
@@ -179,7 +190,8 @@ function [fmt,fmt_h] = fieldfmt(fieldnames)
         'target'       , '%s'   , ...
         'Gtype'        , '%s'   , ...
         'regularization', '%s'   , ...
-        'alpha'       , '%.4f' , ...
+        'shape'        , '%s'   , ...
+        'alpha'        , '%.4f' , ...
         'lambda'       , '%.4f' , ...
         'lambda1'      , '%.4f' , ...
         'LambdaSeq'    , '%s'   , ...

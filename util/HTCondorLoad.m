@@ -114,7 +114,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
     tmp         = loadjson(paramsPath);
     tmp.jobdir  = jobDir;
     if iscell(tmp.data)
-      tmp.subject = cellfun(@(x) sscanf(x,'s%02d'), tmp.data, 'Unif', 0);;
+      tmp.subject = cellfun(@(x) sscanf(x,'s%02d'), tmp.data, 'Unif', 0);
     else
       tmp.subject = sscanf(tmp.data,'s%02d');
     end
@@ -142,7 +142,7 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
       a = cursor + 1;
       b = cursor + numel(R);
       if LEGACY
-        Params(i).cvholdout = mat2cell(Params(i).cvholdout,1,ones(1,numel(Params(i).cvholdout)));
+        Params(i).cvholdout = num2cell(Params(i).cvholdout);
         Params(i).filters = {Params(i).filters};
         Params(i).COPY = {Params(i).COPY};
         tmp = [fieldnames(Params)';struct2cell(Params(i))'];
@@ -165,7 +165,29 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
           end
         end
       else
-        Results(a:b) = R;
+          if strcmp('Uix', fieldnames(R))
+              z = ismember(fieldnames(R),fieldnames(Results));
+              fnp = fieldnames(R);
+              fnp(z) = [];
+              Results(a:b) = rmfield(R,fnp{:});
+          else
+              R.Sz = [];
+              R.nz_rows = full(any(R.Uz, 2));
+              R.Uix = find(R.nz_rows);
+              R.nvox = size(R.Uz, 1);
+              R.structureScoreMap = [];
+              if a == 1
+                  [Results.Sz] = deal([]);
+                  [Results.nz_rows] = deal([]);
+                  [Results.Uix] = deal([]);
+                  [Results.nvox] = deal([]);
+              end
+              z = ismember(fieldnames(R),fieldnames(Results));
+              fnp = fieldnames(R);
+              fnp(z) = [];
+              Results(a:b) = rmfield(R,fnp{:});
+%               Results(a:b) = R;
+          end
       end
       cursor = b;
       a = cursor + 1;

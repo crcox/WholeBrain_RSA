@@ -37,7 +37,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
     if numel(p.Results.V) > 1
         error('crcox:TooManySubjects', 'Each call to "learn_similarity_encoding" currently supports only a single subject.')
     end
-    if numel(p.Results.lambda) == numel(p.Results.lambda1)
+    if numel(p.Results.lambda) == numel(p.Results.lambda1) && numel(p.Results.lambda) > 1
         warning('crcox:NotImplemented', 'Note that HYPERBAND is not yet implemented for GrOWL. Lambda and Lambda1 will be crossed, as if grid searching.');
     end
     C                       = p.Results.C;
@@ -104,7 +104,11 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
         'iter'           , [] );
 
     % Preallocate
-    nperm = size(permutations{1}, 2);
+    if isempty(permutations)
+        nperm = 1;
+    else
+        nperm = size(permutations{1}, 2);
+    end
     N = numel(cvset)*nlam*nperm;
     results(N).Uz = [];
 
@@ -121,8 +125,6 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
     iii = 0; % index into 1-D results structure.
     for subix = 1:numel(Vorig)
         for permix = 1:nperm
-            %  This is kind of a hack to handle the fact that outlying rows
-            %  and rows belonging to the final holdout set will have already been eliminated.
             permutation_index = permutations{subix}(:,permix);
             for i = 1:ncv
                 icv = cvset(i);
