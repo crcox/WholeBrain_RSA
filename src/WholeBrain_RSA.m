@@ -515,6 +515,11 @@ function WholeBrain_RSA(varargin)
                             z = ismember([AdlasInstances.lambda], lambda);
                             AdlasInstances = AdlasInstances(z);
                         end
+                        fprintf('lambda in round %d of hyperband:\n', i);
+                        disp(lambda);
+                        if i > 1
+                            disp('break in');
+                        end
                         [results,AdlasInstances] = learn_similarity_encoding(C, X, regularization, target_type,...
                             'tau'            , tau            , ...
                             'lambda'         , lambda        , ...
