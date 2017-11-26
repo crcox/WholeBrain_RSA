@@ -3,9 +3,10 @@ classdef Adlas
     %   Detailed explanation goes here
 
     properties
+        cvholdout
+        lambda
         A
         B
-        lambda
         X % model weights
         max_iter = 100000
         fid = 1
@@ -219,7 +220,7 @@ function obj = Adlas1(obj, verbosity)
         obj.t = (1 + sqrt(1 + 4*obj.t^2)) / 2;
         Y = X + ((obj.tPrev - 1) / obj.t) * (X - xPrev);
 
-        % Check is all weights set to zero
+        % Check if all weights are set to zero
         if all(Y(:)==0) && obj.iter > 100
             status = STATUS_ALLZERO;
             break
@@ -231,9 +232,13 @@ function obj = Adlas1(obj, verbosity)
     obj.objPrimal = objPrimal;
     obj.objDual   = objDual;
     obj.infeas    = infeas;
-    obj.status    = status;
-    obj.message   = STATUS_MSG{status};
-    obj.Aprods   = obj.Aprods + ceil(obj.iter / obj.gradIter);
+    if all(Y(:)==0)
+        obj.status = STATUS_ALLZERO;
+    else
+        obj.status = status;
+    end
+    obj.message = STATUS_MSG{status};
+    obj.Aprods  = obj.Aprods + ceil(obj.iter / obj.gradIter);
 end
 
 function x = proxL1L2(Y,lambda)

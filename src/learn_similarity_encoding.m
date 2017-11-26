@@ -222,9 +222,44 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
                                         info = struct();
                                     else
                                         if isempty(AdlasInstances(iii))
+                                            % In case of new model:
+                                            %   1. Initialize model
+                                            %   2. Train model
                                             AdlasInstances(iii) = Adlas(Vt, Ct, lam, options);
+                                            AdlasInstances(iii) = AdlasInstances(iii).train(options);
+                                        elseif AdlasInstances(iii).status == 2
+                                        % In case of existing model:
+                                        %   1. Check that status == 2,
+                                        %   which means that the previos
+                                        %   round of training stopped
+                                        %   because it hit the iteration
+                                        %   limit. 2. If so, train for more
+                                        %   iterations.
+                                            AdlasInstances(iii) = AdlasInstances(iii).train(options);
+                                        else
+                                        % In case of existing model and
+                                        % status == 1 or status == 3,
+                                        % continue without doing anything.
+                                        % Status 1 means optimal
+                                        % convergence with at least one
+                                        % nonzero weight assigned.
+                                        % Status 3 means the solution is
+                                        % zero-sparse.
+                                        %
+                                        % If a zero-sparse solution is
+                                        % obtained in a single iteration,
+                                        % this can prevent some information
+                                        % from ever being logged in the
+                                        % Adlas structure, which results in
+                                        % an error at run-time when trying
+                                        % to pick up where things left off.
+                                        %
+                                        % By not trying to train these
+                                        % models any more (which is fine,
+                                        % because they have converged on a
+                                        % solution already, anyway), this
+                                        % error should be avoided.
                                         end
-                                        AdlasInstances(iii) = AdlasInstances(iii).train(options);
                                         Uz = AdlasInstances(iii).X;
                                         info = AdlasInstances(iii);
                                     end

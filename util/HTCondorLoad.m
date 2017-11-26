@@ -165,17 +165,23 @@ function [Params, Results] = HTCondorLoad(ResultDir, varargin)
           end
         end
       else
-          if strcmp('Uix', fieldnames(R))
+          if any(strcmp('Uix', fieldnames(R)))
               z = ismember(fieldnames(R),fieldnames(Results));
               fnp = fieldnames(R);
               fnp(z) = [];
-              Results(a:b) = rmfield(R,fnp{:});
+              if all(z)
+                  Results(a:b) = R;
+              else
+                Results(a:b) = rmfield(R,fnp{:});
+              end
           else
-              R.Sz = [];
-              R.nz_rows = full(any(R.Uz, 2));
-              R.Uix = find(R.nz_rows);
-              R.nvox = size(R.Uz, 1);
-              R.structureScoreMap = [];
+              for iii = 1:numel(R)
+                R(iii).Sz = [];
+                R(iii).nz_rows = full(any(R(iii).Uz, 2));
+                R(iii).Uix = find(R(iii).nz_rows);
+                R(iii).nvox = size(R(iii).Uz, 1);
+                R(iii).structureScoreMap = [];
+              end
               if a == 1
                   [Results.Sz] = deal([]);
                   [Results.nz_rows] = deal([]);
