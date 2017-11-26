@@ -131,6 +131,12 @@ function obj = Adlas1(obj, verbosity)
 
         % Increment iteration count
         obj.iter = obj.iter + 1;
+        
+        % Keep copies of previous values
+        xPrev  = X;
+        fPrev  = f;
+        obj.tPrev  = obj.t;
+        obj.AxPrev = Ax;
 
         % Check optimality conditions
         if ((mod(obj.iter,obj.optimIter) == 0))
@@ -188,12 +194,6 @@ function obj = Adlas1(obj, verbosity)
             end
             break;
         end
-
-        % Keep copies of previous values
-        obj.AxPrev = Ax;
-        xPrev  = X;
-        fPrev  = f;
-        obj.tPrev  = obj.t;
 
         % Lipschitz search
         while (obj.L < inf)
