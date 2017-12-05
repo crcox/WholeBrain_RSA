@@ -63,127 +63,121 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
 
     Vorig = V;
 
-    if isempty(lambda)
-        nlam = 1;
-    else
-        nlam = length(lambda);
-    end
-
-    if isempty(lambda1)
-        nlam1 = 1;
-    else
-        nlam1 = length(lambda1);
-    end
-
-    if isempty(holdout)
-        cvset = 1:max(cvind);
-    else
-        cvset = holdout;
-    end
-    ncv = numel(cvset);
-
-    % Define results structure
-    results = struct( ...
-        'Uz'             , [] , ...
-        'Cz'             , [] , ...
-        'Sz'             , [] , ...
-        'nz_rows'        , [] , ...
-        'subject'        , [] , ...
-        'cvholdout'      , [] , ...
-        'finalholdout'   , [] , ...
-        'lambda'         , [] , ...
-        'lambda1'        , [] , ...
-        'LambdaSeq'      , [] , ...
-        'regularization' , [] , ...
-        'bias'           , [] , ...
-        'normalize'      , [] , ...
-        'nzv'            , [] , ...
-        'coords'         , [] , ...
-        'err1'           , [] , ...
-        'err2'           , [] , ...
-        'iter'           , [] );
-
-    % Preallocate
-    if isempty(permutations)
-        nperm = 1;
-    else
-        nperm = size(permutations{1}, 2);
-    end
-    N = numel(cvset)*nlam*nperm;
-    results(N).Uz = [];
-
     if isempty(p.Results.AdlasInstances)
         AdlasInstances = repmat(Adlas,N,1);
     else
         AdlasInstances = p.Results.AdlasInstances;
     end
+    N = numel(AdlasInstances);
 
     if VERBOSE
         fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
     end
 
-    iii = 0; % index into 1-D results structure.
-    for subix = 1:numel(Vorig)
-        for permix = 1:nperm
-            permutation_index = permutations{subix}(:,permix);
-            for i = 1:ncv
-                icv = cvset(i);
-                test_set  = cvind{subix}==icv;
-                train_set = ~test_set;
+    for i = 1:N
+        subix = AdlasInstances(i).subject;
+        permix = AdlasInstances(i).RandomSeed;
+        cvix = AdlasInstances(i).cvholdout;
+        permutation_index = permutations{subix}(:,permix);
 
-                V = Vorig{subix};
+        test_set  = cvind{subix} == cvix; % CHECK THIS
+        train_set = ~test_set;
 
-                % normalize
-                switch lower(normalize)
-                    case 'zscore_train'
-                        mm = mean(V(train_set,:),1);
-                        ss = std(V(train_set,:),0,1);
-                    case 'zscore'
-                        mm = mean(V,1);
-                        ss = std(V,0,1);
-                    case 'stdev_train'
-                        mm = zeros(1, size(V,2));
-                        ss = std(V(train_set,:),0,1);
-                    case 'stdev'
-                        mm = zeros(1, size(V,2));
-                        ss = std(V,0,1);
-                    case '2norm_train'
-                        mm = mean(V(train_set,:),1);
-                        ss = norm(V(train_set,:));
-                    case '2norm'
-                        mm = mean(V,1);
-                        ss = norm(V);
-                    otherwise
-                        error('Unrecognized normalizaion method! Exiting...')
-                end
-                z = ss > 0;
-                V(:,z) = bsxfun(@minus,V(:,z), mm(z));
-                V(:,z) = bsxfun(@rdivide,V(:,z), ss(z));
-                if any(~z)
-                    warning('There are %d constant-valued voxels. These voxels are not normalized.', sum(z));
-                    if VERBOSE
-                        fprintf('Constant-valued voxel indexes:\n');
-                        disp(find(~z));
-                    end
-                end
+        V = Vorig{subix};
+        % normalize (MAYBE MOVE THIS OUT OF MAIN LOOP?)
+        switch lower(normalize)
+            case 'zscore_train'
+                mm = mean(V(train_set,:),1);
+                ss = std(V(train_set,:),0,1);
+            case 'zscore'
+                mm = mean(V,1);
+                ss = std(V,0,1);
+            case 'stdev_train'
+                mm = zeros(1, size(V,2));
+                ss = std(V(train_set,:),0,1);
+            case 'stdev'
+                mm = zeros(1, size(V,2));
+                ss = std(V,0,1);
+            case '2norm_train'
+                mm = mean(V(train_set,:),1);
+                ss = norm(V(train_set,:));
+            case '2norm'
+                mm = mean(V,1);
+                ss = norm(V);
+            otherwise
+                error('Unrecognized normalizaion method! Exiting...')
+        end
+        z = ss > 0;
+        V(:,z) = bsxfun(@minus,V(:,z), mm(z));
+        V(:,z) = bsxfun(@rdivide,V(:,z), ss(z));
+        if any(~z)
+            warning('There are %d constant-valued voxels. These voxels are not normalized.', sum(z));
+            if VERBOSE
+                fprintf('Constant-valued voxel indexes:\n');
+                disp(find(~z));
+            end
+        end
 
-                if BIAS
-                    V = [V, ones(size(V,1),1)]; %#ok<AGROW> It's not actually growing, see line 111.
-                end
+        if BIAS
+            V = [V, ones(size(V,1),1)]; %#ok<AGROW> It's not actually growing, see line 86.
+        end
 
-                [~,d] = size(V);
+        [~,d] = size(V);
 
-                Cp = C{subix}(permutation_index,:);
-                % cpcr = zeros(1,size(Cp,2));
-                % for k = 1:size(Cp, 2);
-                %     cpcr(k) = corr(Cp(:,k),C{subix}(:,k));
-                % end
-                % disp(cpcr);
-                Ct = Cp(train_set,:);
-                Ch = Cp(test_set,:);
-                Vt = V(train_set,:);
-                Vh = V(test_set,:);
+        Cp = C{subix}(permutation_index,:);
+        % cpcr = zeros(1,size(Cp,2));
+        % for k = 1:size(Cp, 2);
+        %     cpcr(k) = corr(Cp(:,k),C{subix}(:,k));
+        % end
+        % disp(cpcr);
+        Ct = Cp(train_set,:);
+        Ch = Cp(test_set,:);
+        Vt = V(train_set,:);
+        Vh = V(test_set,:);
+                
+        if isempty(AdlasInstances(iii).Adlas)
+        % In case of new model:
+        %   1. Initialize model
+        %   2. Train model
+            AdlasInstances(iii).Adlas = Adlas(Vt, Ct, lam, options);
+            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
+        elseif AdlasInstances(iii).status == 2
+        % In case of existing model:
+        %   1. Check that status == 2,
+        %   which means that the previos
+        %   round of training stopped
+        %   because it hit the iteration
+        %   limit. 2. If so, train for more
+        %   iterations.
+            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
+        else
+        % In case of existing model and
+        % status == 1 or status == 3,
+        % continue without doing anything.
+        % Status 1 means optimal
+        % convergence with at least one
+        % nonzero weight assigned.
+        % Status 3 means the solution is
+        % zero-sparse.
+        %
+        % If a zero-sparse solution is
+        % obtained in a single iteration,
+        % this can prevent some information
+        % from ever being logged in the
+        % Adlas structure, which results in
+        % an error at run-time when trying
+        % to pick up where things left off.
+        %
+        % By not trying to train these
+        % models any more (which is fine,
+        % because they have converged on a
+        % solution already, anyway), this
+        % error should be avoided.
+        end
 
+        Uz = AdlasInstances(iii).Adlas.X;
+        info = AdlasInstances(iii).Adlas;
+                
                 for j = 1:nlam
                     if isempty(lambda)
                         lam = nan(1);
@@ -221,48 +215,9 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
                                         Uz = pinv(Vt)*Ct;
                                         info = struct();
                                     else
-                                        if isempty(AdlasInstances(iii))
-                                            % In case of new model:
-                                            %   1. Initialize model
-                                            %   2. Train model
-                                            AdlasInstances(iii) = Adlas(Vt, Ct, lam, options);
-                                            AdlasInstances(iii) = AdlasInstances(iii).train(options);
-                                        elseif AdlasInstances(iii).status == 2
-                                        % In case of existing model:
-                                        %   1. Check that status == 2,
-                                        %   which means that the previos
-                                        %   round of training stopped
-                                        %   because it hit the iteration
-                                        %   limit. 2. If so, train for more
-                                        %   iterations.
-                                            AdlasInstances(iii) = AdlasInstances(iii).train(options);
-                                        else
-                                        % In case of existing model and
-                                        % status == 1 or status == 3,
-                                        % continue without doing anything.
-                                        % Status 1 means optimal
-                                        % convergence with at least one
-                                        % nonzero weight assigned.
-                                        % Status 3 means the solution is
-                                        % zero-sparse.
-                                        %
-                                        % If a zero-sparse solution is
-                                        % obtained in a single iteration,
-                                        % this can prevent some information
-                                        % from ever being logged in the
-                                        % Adlas structure, which results in
-                                        % an error at run-time when trying
-                                        % to pick up where things left off.
-                                        %
-                                        % By not trying to train these
-                                        % models any more (which is fine,
-                                        % because they have converged on a
-                                        % solution already, anyway), this
-                                        % error should be avoided.
-                                        end
-                                        Uz = AdlasInstances(iii).X;
-                                        info = AdlasInstances(iii);
+                                        [Uz, info] = Adlas1(Vt, Ct, lam, options);
                                     end
+
 
                                 case 'GROWL'
                                     switch LambdaSeq
@@ -322,25 +277,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
                         Cz = V(:,ix)*uz;
                         Ctz = Vt(:,ix)*uz;
                         Chz = Vh(:,ix)*uz;
-    %                     St = C{subix}*C{subix}';
 
-    %                     if strcmpi(target_type,'similarity')
-    %                         lt1  = logical(tril(true(nnz(test_set)),0));
-    %                         s1   = S{subix}(test_set,test_set);
-    %                         sz1  = Sz(test_set,test_set);
-    %                         st1  = St(test_set,test_set);
-    %                         s1   = s1(lt1);
-    %                         sz1  = sz1(lt1);
-    %                         st1  = st1(lt1);
-    % 
-    %                         lt2 = logical(tril(true(nnz(train_set)),0));
-    %                         s2  = S{subix}(train_set,train_set);
-    %                         sz2 = Sz(train_set,train_set);
-    %                         st2 = St(train_set,train_set);
-    %                         s2  = s2(lt2);
-    %                         sz2 = sz2(lt2);
-    %                         st2 = st2(lt2);
-    %                     end
 
                         if ~SMALL
                             results(iii).Uz  = uz;
@@ -367,15 +304,8 @@ function [results,AdlasInstances] = learn_similarity_encoding(C, V, regularizati
 
                         if any(test_set)
                             results(iii).err1 = norm(Ch - Chz,'fro')/norm(Ch,'fro');
-    %                         if strcmpi(target_type,'similarity')
-    %                             results(iii).structureScoreMap = s1(:)' * sz1(:);
-    %                         end
                         end
-
                         results(iii).err2 = norm(Ct - Ctz,'fro')/norm(Ct,'fro');
-    %                     if strcmpi(target_type,'similarity')
-    %                         results(iii).structureScoreMap = s2(:)' * sz2(:);
-    %                     end
 
                         if strcmpi(regularization, 'L1L2_GLMNET')
                             results(iii).iter = info.npasses;
@@ -433,3 +363,24 @@ end % learn_similarity_encoding
 %             disp(c(permix,:))
 %         end
 %     end
+
+% COMPARISON AGAINST FULL RANK AND LIMITED RANK SQUARE MATRIX
+% ===========================================================
+% St = C{subix}*C{subix}';
+% if strcmpi(target_type,'similarity')
+%     lt1  = logical(tril(true(nnz(test_set)),0));
+%     s1   = S{subix}(test_set,test_set);
+%     sz1  = Sz(test_set,test_set);
+%     st1  = St(test_set,test_set);
+%     s1   = s1(lt1);
+%     sz1  = sz1(lt1);
+%     st1  = st1(lt1);
+% 
+%     lt2 = logical(tril(true(nnz(train_set)),0));
+%     s2  = S{subix}(train_set,train_set);
+%     sz2 = Sz(train_set,train_set);
+%     st2 = St(train_set,train_set);
+%     s2  = s2(lt2);
+%     sz2 = sz2(lt2);
+%     st2 = st2(lt2);
+% end
