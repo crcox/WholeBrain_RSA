@@ -24,6 +24,7 @@ function HTCondor_mat2csv(ResultDir, varargin)
     addParameter(p,'ResultFile','results.mat',@ischar);
     addParameter(p,'ParamFile','params.json',@ischar);
     addParameter(p,'SortJobs',false,@islogical)
+    addParameter(p,'correct_nzv',0,@isnumeric)
     addParameter(p,'SkipFields',{})
     addParameter(p,'IncludeFields',{})
     addParameter(p,'JobList',{},@iscellstr)
@@ -37,6 +38,7 @@ function HTCondor_mat2csv(ResultDir, varargin)
     SORT_JOBS   = p.Results.SortJobs;
     SKIP        = p.Results.SkipFields;
     INCLUDE     = p.Results.IncludeFields;
+    correct_nzv = p.Results.correct_nzv;
     QUIET       = p.Results.quiet;
     jobDirs     = p.Results.JobList;
 
@@ -98,6 +100,12 @@ function HTCondor_mat2csv(ResultDir, varargin)
             r = load(rfile, 'results');
             z = ismember(SKIP,fieldnames(r.results));
             R = rmfield(r.results, SKIP(z));
+            if correct_nzv
+                for ii = 1:numel(R)
+                    l2norm = sum(r.results(ii).Uz .^ 2, 2);
+                    R(ii).nzv = nnz(l2norm > correct_nzv);
+                end
+            end
             if isfield(R,'iterations')
                 for ii = 1:numel(R)
                     R(ii).iterations = numel(R(ii).iterations);
