@@ -1,4 +1,4 @@
-function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C, V, regularization, varargin)
+function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regularization, varargin)
 % TO DO:
 % Currently, the function can only handle a single subject. It will also
 % only support HYPERBAND for a single hyperparameter, meaning that it can
@@ -25,10 +25,6 @@ function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C,
         warning('crcox:NotImplemented', 'Note that HYPERBAND is not yet implemented for GrOWL. Lambda and Lambda1 will be crossed, as if grid searching.');
     end
     
-    AdlasInstances = p.Results.AdlasInstances;
-    C              = p.Results.C;
-    V              = p.Results.V;
-    regularization = p.Results.regularization;
     cvind          = p.Results.cvind;
     permutations   = p.Results.permutations;
     options        = p.Results.AdlasOpts;
@@ -40,6 +36,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C,
     end
 
     Vorig = V;
+    Corig = C;
 
     if VERBOSE
         fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
@@ -54,8 +51,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C,
         BIAS = AdlasInstances(i).bias;
         permutation_index = permutations{subix}(:,permix);
 
-        test_set  = cvind{subix} == cvix; % CHECK THIS
-        train_set = ~test_set;
+        train_set  = cvind{subix} ~= cvix; % CHECK THIS
 
         V = Vorig{subix};
         switch lower(normalize)
@@ -112,81 +108,44 @@ function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C,
                 error('%s is not an implemented regularization. check spelling', regularization);
         end
         
-        Cp = C{subix}(permutation_index,:);
-        % cpcr = zeros(1,size(Cp,2));
-        % for k = 1:size(Cp, 2);
-        %     cpcr(k) = corr(Cp(:,k),C{subix}(:,k));
-        % end
-        % disp(cpcr);
-        Ct = Cp(train_set,:);
-        Ch = Cp(test_set,:);
-        Vt = V(train_set,:);
-                
-        if isempty(AdlasInstances(iii).Adlas)
+        C = Corig{subix}(permutation_index,:);
+        
+        % TRAINING CONDITIONS
+        % ===================
         % In case of new model:
+        % --------------------
         %   1. Initialize model
         %   2. Train model
-            AdlasInstances(iii).Adlas = Adlas(Vt, Ct, lamseq, options);
-            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
-        elseif AdlasInstances(iii).status == 2
+        %
         % In case of existing model:
+        % -------------------------
         %   1. Check that status == 2, which means that the previos round
         %   of training stopped because it hit the iteration limit.
         %   2. If so, train for more iterations.
+        %
+        % In case of existing model and status == 1 or status == 3:
+        % --------------------------------------------------------
+        %   Continue without doing anything. Status 1 means optimal
+        %   convergence with at least one nonzero weight assigned. Status 3
+        %   means the solution is zero-sparse.
+        %
+        %   If a zero-sparse solution is obtained in a single iteration,
+        %   this can prevent some information from ever being logged in the
+        %   Adlas structure, which results in an error at run-time when
+        %   trying to pick up where things left off.
+        %
+        %   By not trying to train these models any more (which is fine,
+        %   because they have converged on a solution already, anyway),
+        %   this error should be avoided.
+        if isempty(AdlasInstances(iii).Adlas)
+            AdlasInstances(iii).Adlas = Adlas(V, C, lamseq, train_set, options);
+            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
+        elseif AdlasInstances(iii).status == 2
             AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
         else
-        % In case of existing model and status == 1 or status == 3,
-        % continue without doing anything. Status 1 means optimal
-        % convergence with at least one nonzero weight assigned. Status 3
-        % means the solution is zero-sparse.
-        %
-        % If a zero-sparse solution is obtained in a single iteration, this
-        % can prevent some information from ever being logged in the Adlas
-        % structure, which results in an error at run-time when trying to
-        % pick up where things left off.
-        %
-        % By not trying to train these models any more (which is fine,
-        % because they have converged on a solution already, anyway), this
-        % error should be avoided.
+        % Do nothing
         end
-
-        Uz = AdlasInstances(iii).Adlas.X;
-        info = AdlasInstances(iii).Adlas;
-
-        % KEY
-        % ===
-        % Our models assume that S = V*W*V'
-        % V  : The fMRI data.
-        % W  : A matrix of weights.
-        % S  : The true similarity matrix.
-        % Sz : The predicted similarity matrix.
-        % C  : The square root of S, truncated to the first r columns (low rank assumption)
-        % Cz : The predicted C.
-        % St : The approximated S, reconstructed from actual C.
-        % Uz : The estimated voxel weights, with a r weights per voxel.
-
-        nz_rows = any(Uz,2);
-        ix = find(nz_rows);
-        nv = size(Uz,1);
-        Unz = nnz(nz_rows);
-        uz = Uz(ix,:);
-
-        % Prepare to evaluate solutions
-%         Wz = uz*uz';
-%         Sz = V(:,ix)*Wz*V(:,ix)';
-        Cz = V(:,ix)*uz;
-        Ctz = Cz(train_set,:);
-        Chz = Cz(test_set,:);
-
-        if any(test_set)
-            err1 = nrsa_loss(Ch, Chz);
-            %cor1 = nrsa_corr(Ch*Ch', Chz*Chz');
-        else
-            err1 = [];
-            %cor1 = [];
-        end
-        err2 = nrsa_loss(Ct, Ctz);
-        %cor2 = nrsa_corr(Ct*Ct', Ctz*Ctz');
+        AdlasInstances(iii).Adlas.test();
 
         if VERBOSE
             fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10d | %10d\n', ...
@@ -194,7 +153,7 @@ function [results,AdlasInstances] = learn_similarity_encoding(AdlasInstances, C,
         end
     end
     fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
-end % learn_similarity_encoding
+end
 
 % OLD PERMUTATION ALGORITHM
 % -------------------------
@@ -287,3 +246,38 @@ end % learn_similarity_encoding
 % else
 %     results(iii).iter = info.iter;
 % end
+
+% Old results computation
+% =======================
+% % KEY
+% % ===
+% % Our models assume that S = V*W*V'
+% % V  : The fMRI data.
+% % W  : A matrix of weights.
+% % S  : The true similarity matrix.
+% % Sz : The predicted similarity matrix.
+% % C  : The square root of S, truncated to the first r columns (low rank assumption)
+% % Cz : The predicted C.
+% % St : The approximated S, reconstructed from actual C.
+% % Uz : The estimated voxel weights, with a r weights per voxel.
+% 
+% nz_rows = any(Uz,2);
+% ix = find(nz_rows);
+% nv = size(Uz,1);
+% Unz = nnz(nz_rows);
+% uz = Uz(ix,:);
+% 
+% % Prepare to evaluate solutions
+% Cz = V(:,ix)*uz;
+% Ctz = Cz(train_set,:);
+% Chz = Cz(test_set,:);
+% 
+% if any(test_set)
+%     err1 = nrsa_loss(Ch, Chz);
+%     %cor1 = nrsa_corr(Ch*Ch', Chz*Chz');
+% else
+%     err1 = [];
+%     %cor1 = [];
+% end
+% err2 = nrsa_loss(Ct, Ctz);
+% %cor2 = nrsa_corr(Ct*Ct', Ctz*Ctz');

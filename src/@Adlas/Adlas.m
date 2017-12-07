@@ -3,11 +3,11 @@ classdef Adlas
     %   Detailed explanation goes here
 
     properties
-        cvholdout
-        lambda
-        A
-        B
-        X % model weights
+        LambdaSequence
+        A % Data
+        B % Targets
+        X % Weights
+        trainingFilter
         max_iter = 100000
         fid = 1
         optimIter = 1
@@ -28,6 +28,8 @@ classdef Adlas
         objDual
         infeas
         Aprods
+        trainingError
+        testError
     end
     properties ( Access = private, Hidden = true )
         EMPTY = 0;
@@ -36,32 +38,40 @@ classdef Adlas
     end
 
     methods
-        function obj = Adlas(A,B,lambda,opts)
+        function obj = Adlas(A,B,LambdaSequence,trainingFilter,opts)
             if (nargin == 0)
                 obj.EMPTY = 1;
                 return
             end
             if (nargin <  4), opts = struct(); end
-            obj.A = A;
-            obj.B = B;
-            % Ensure that lambda is non-increasing
-            if ((length(lambda) > 1) && any(lambda(2:end) > lambda(1:end-1)))
-                error('Lambda must be non-increasing.');
-            end
-            if (lambda(end) < 0)
-                error('Lambda must be nonnegative');
-            elseif (lambda(1) == 0)
-                error('Lambda must have at least one nonnegative entry.');
-            end
-            obj.lambda = lambda;
-            fn = fieldnames(opts);
-            for i = 1:numel(fn)
-                obj.(fn{i}) = opts.(fn{i});
-            end
             obj.n = size(A,2);
             obj.r = size(B,2);
             obj.s = RandStream('mt19937ar','Seed',0);
             obj.L = 1;
+            obj.A = A;
+            obj.B = B;
+            % Ensure that lambda is non-increasing
+            if ((length(LambdaSequence) > 1) && any(LambdaSequence(2:end) > LambdaSequence(1:end-1)))
+                error('Lambda must be non-increasing.');
+            end
+            if (LambdaSequence(end) < 0)
+                error('Lambda must be nonnegative');
+            elseif (LambdaSequence(1) == 0)
+                error('Lambda must have at least one nonnegative entry.');
+            end
+            obj.LambdaSequence = LambdaSequence;
+            if isempty(trainingFilter)
+                obj.trainingFilter = true(obj.n, 1);
+            elseif numel(trainingFilter) ~= obj.n;
+                error('The trainingFilter must have as many elements as there are targets (i.e., examples in the dataset).');
+            else
+                obj.trainingFilter = trainingFilter;
+            end
+            fn = fieldnames(opts);
+            for i = 1:numel(fn)
+                obj.(fn{i}) = opts.(fn{i});
+            end
+
             if ~isfield(opts, 'xInit') || (isempty(opts.xInit))
                 obj.X = zeros(obj.n,obj.r);
             end
@@ -73,6 +83,15 @@ classdef Adlas
                 obj.(fn{i}) = opts.(fn{i});
             end
             obj = Adlas1(obj);
+        end
+        function obj = test(obj)
+            x = obj.X;                        % Weights
+            a = obj.A(~obj.trainingFilter,:); % Data
+            b = obj.B(~obj.trainingFilter,:); % Targets
+            obj.testError = nrsa_loss(b,a*x);
+            a = obj.A(obj.trainingFilter,:);  % Data
+            b = obj.B(obj.trainingFilter,:);  % Targets
+            obj.trainingError = nrsa_loss(b,a*x);
         end
         function x = isempty(obj)
             x = all([obj.EMPTY] == 1);
@@ -92,9 +111,9 @@ function obj = Adlas1(obj, verbosity)
         verbosity = 0;
     end
     % Initialize parameters
-    X       = obj.X;
-    A       = obj.A;
-    B       = obj.B;
+    X       = obj.X; % Weights
+    A       = obj.A(obj.trainingFilter,:); % Data
+    B       = obj.B(obj.trainingFilter,:); % Targets
     Ax      = A * X;
     Y       = X;
     status  = STATUS_RUNNING;
@@ -103,7 +122,7 @@ function obj = Adlas1(obj, verbosity)
     tolRelGap = obj.tolRelGap;
 
     % Deal with Lasso case
-    modeLasso = (numel(obj.lambda) == 1);
+    modeLasso = (numel(obj.LambdaSequence) == 1);
     if (modeLasso)
         proxFunction = @(v1,v2) proxL1L2(v1,v2);
     else
@@ -140,28 +159,28 @@ function obj = Adlas1(obj, verbosity)
                 gs = sqrt(sum(g.^2,2));
                 ys = sqrt(sum(Y.^2,2));
 
-                infeas = max(norm(gs,inf)-obj.lambda,0);
+                infeas = max(norm(gs,inf)-obj.LambdaSequence,0);
 
-                objPrimal = f + obj.lambda*norm(ys,1);
+                objPrimal = f + obj.LambdaSequence*norm(ys,1);
                 objDual   = -f - trace(r'*B);
             else
                 gs     = sort(sqrt(sum(g.^2,2)),'descend');
                 ys     = sort(sqrt(sum(Y.^2,2)),'descend');
-                infeas = max(max(cumsum(gs-obj.lambda)),0);
+                infeas = max(max(cumsum(gs-obj.LambdaSequence)),0);
 
                 % Compute primal and dual objective
-                objPrimal =  f + obj.lambda'*ys;
+                objPrimal =  f + obj.LambdaSequence'*ys;
                 objDual  = -f - trace(r'*B);
             end
 
             % Format string
             if (verbosity > 0)
-                str = sprintf(' %9.2e  %9.2e  %9.2e',objPrimal - objDual, infeas/obj.lambda(1), abs(objPrimal - objDual) / max(1,objPrimal));
+                str = sprintf(' %9.2e  %9.2e  %9.2e',objPrimal - objDual, infeas/obj.LambdaSequence(1), abs(objPrimal - objDual) / max(1,objPrimal));
             end
 
             % Check primal-dual gap
             if ((abs(objPrimal - objDual)/max(1,objPrimal) < tolRelGap)  && ...
-                    (infeas < tolInfeas * obj.lambda(1)) )
+                    (infeas < tolInfeas * obj.LambdaSequence(1)) )
                 status = STATUS_OPTIMAL;
             end
 
@@ -199,7 +218,7 @@ function obj = Adlas1(obj, verbosity)
         % Lipschitz search
         while (obj.L < inf)
             % Compute prox mapping
-            X = proxFunction(Y - (1/obj.L)*g, obj.lambda/obj.L);
+            X = proxFunction(Y - (1/obj.L)*g, obj.LambdaSequence/obj.L);
             d = X - Y;
 
             Ax = A*X;%A1*vec(X);
