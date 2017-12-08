@@ -68,7 +68,7 @@ function WholeBrain_RSA(varargin)
     PermutationTest         = p.Results.PermutationTest;
     PermutationMethod       = p.Results.PermutationMethod;
     PermutationIndex        = p.Results.PermutationIndex;
-    RestrictPermutationByCV = p.Results.RestrictPermutationByCV;
+%     RestrictPermutationByCV = p.Results.RestrictPermutationByCV;
     SmallFootprint          = p.Results.SmallFootprint;
     RandomSeed              = p.Results.RandomSeed;
     regularization          = p.Results.regularization;
@@ -92,9 +92,6 @@ function WholeBrain_RSA(varargin)
     lambda1                 = p.Results.lambda1;
     LambdaSeq               = p.Results.LambdaSeq;
     opts                    = p.Results.AdlasOpts;
-    PARALLEL                = p.Results.PARALLEL;
-    SanityCheckData         = p.Results.SanityCheckData;
-    SanityCheckModel        = p.Results.SanityCheckModel;
     SaveResultsAs           = p.Results.SaveResultsAs;
     FMT_subjid              = p.Results.subject_id_fmt;
     % --- searchlight specific --- %
@@ -102,8 +99,8 @@ function WholeBrain_RSA(varargin)
     slSim_Measure      = p.Results.slSim_Measure;
     slPermutationType  = p.Results.slPermutationType;
     slPermutationCount = p.Results.slPermutations;
-    slShape            = p.Results.slShape;
-    slRadius           = p.Results.slRadius;
+%     slShape            = p.Results.slShape;
+%     slRadius           = p.Results.slRadius;
     % --- HYPERBAND ---
     HYPERBAND = p.Results.HYPERBAND;
     BRACKETS = p.Results.BRACKETS;
@@ -259,7 +256,8 @@ function WholeBrain_RSA(varargin)
 %                         C = permute_target(C, PermutationMethod);
 %                     end
             case 'manual'
-                load(PermutationIndex, 'PERMUTATION_INDEX');
+                StagingArea = load(PermutationIndex, 'PERMUTATION_INDEX');
+                PERMUTATION_INDEX = StagingArea.PERMUTATION_INDEX;
                 for i = 1:numel(C)
                     %  This is kind of a hack to handle the fact eliminating
                     %  outlying rows and rows belonging to the final holdout
@@ -275,146 +273,114 @@ function WholeBrain_RSA(varargin)
         PERMUTATION_INDEX = cell(size(C));
         for i = 1:numel(C)
             PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
+            RandomSeed = 0;
         end
     end
 
-    %% ---------------------Setting regularization parameters-------------------------
-    if SEARCHLIGHT
-        condition_handling_searchlight();
-    else % END SEACHLIGHT CONDITION
-        switch upper(regularization)
-            case 'L1L2'
-                if isempty(HYPERBAND) 
-                    [results,~] = learn_similarity_encoding(C, X, regularization, target_type,...
-                        'tau'            , tau                 , ...
-                        'lambda'         , lambda              , ...
-                        'cvind'          , cvind               , ...
-                        'cvholdout'      , cvholdout           , ...
-                        'normalize'      , normalize           , ...
-                        'bias'           , BIAS                , ...
-                        'permutations'   , PERMUTATION_INDEX   , ... 
-                        'DEBUG'          , DEBUG               , ...
-                        'SmallFootprint' , SmallFootprint      , ...
-                        'AdlasOpts'      , opts);
-                else
-                    % NB: Subject and Permutation loop should be handled
-                    % here for hyperband... this is a ToDo.
-%                     [n, r] = hyperband_cfg(HYPERBAND.budget, HYPERBAND.aggressiveness);
-%                     s_max = floor((log(HYPERBAND.budget)/log(HYPERBAND.aggressiveness)) + 1);
-%                     s = s_max - BRACKETS.s;
-                    n = BRACKETS.n;
-                    r = BRACKETS.r;
-                    AdlasInstances = [];
-                    for i = 1:numel(n)
-                        lambda = lambda(1:n(i));
-                        opts.max_iter = r(i) * 1000;
-                        if ~isempty(AdlasInstances)
-                            z = ismember([AdlasInstances.lambda], lambda);
-                            AdlasInstances = AdlasInstances(z);
-                        end
-                        fprintf('lambda in round %d of hyperband:\n', i);
-                        disp(lambda);
-                        if i > 1
-                            disp('break in');
-                        end
-                        AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization, ...
-                            'cvind'          , cvind          , ...
-                            'permutations'   , PERMUTATION_INDEX, ... 
-                            'AdlasOpts'      , opts);
+    %% --- Setting regularization parameters and running models ---
+    if isempty(HYPERBAND)
+        % Grid search
+        AdlasInstances = AdlasContainer( ...
+            'subject', subjix, ...
+            'RandomSeed', 1:size(PERMUTATION_INDEX{1},2), ...
+            'cvholdout', cvholdout, ...
+            'bias', BIAS, ...
+            'LambdaSeq', LambdaSeq, ...
+            'normalize', normalize, ...
+            'regularization', regularization, ...
+            'lambda', lambda, ...
+            'lambda1', lambda1);
+        AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
+            'cvind'          , cvind          , ...
+            'permutations'   , PERMUTATION_INDEX, ... 
+            'AdlasOpts'      , opts);
 
-                        err1 = zeros(n(i), 1);
-                        for j = 1:numel(lambda)
-                            err1(j) = mean([results([results.lambda] == lambda(j)).err1]);
-                        end
-                        [~,ix] = sort(err1);
-                        lambda = lambda(ix);
-                    end
-                end
-
-            case {'GROWL','GROWL2'}
-                if isempty(HYPERBAND)
-                    [results,info] = learn_similarity_encoding(S, X, regularization, target_type,...
-                        'tau'            , tau            , ...
-                        'lambda'         , lambda         , ...
-                        'lambda1'        , lambda1        , ...
-                        'LambdaSeq'      , LambdaSeq      , ...
-                        'cvind'          , cvind          , ...
-                        'cvholdout'      , cvholdout      , ...
-                        'normalize'      , normalize      , ...
-                        'bias'           , BIAS           , ...
-                        'permutations'   , PERMUTATION_INDEX   , ... 
-                        'DEBUG'          , DEBUG          , ...
-                        'SmallFootprint' , SmallFootprint , ...
-                        'AdlasOpts'      , opts); %#ok<ASGLU>
-                else
-                    n = BRACKETS.n;
-                    r = BRACKETS.r;
-                    AdlasInstances = AdlasContainer( ...
-                        'subject', subjix, ...
-                        'RandomSeed', 1:size(PERMUTATION_INDEX{1},2), ...
-                        'cvholdout', cvholdout, ...
-                        'bias', BIAS, ...
-                        'LambdaSeq', LambdaSeq, ...
-                        'normalize', normalize, ...
-                        'regularization', regularization, ...
-                        'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
-
-                    for i = 1:numel(n)
-                        opts.max_iter = r(i) * 1000;
-                        fprintf('lambda in round %d of hyperband:\n', i);
-                        disp(lambda);
-                        [AdlasInstances] = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
-                            'cvind'          , cvind          , ...
-                            'permutations'   , PERMUTATION_INDEX, ... 
-                            'DEBUG'          , DEBUG          , ...
-                            'SmallFootprint' , SmallFootprint , ...
-                            'AdlasOpts'      , opts);
-                        % Delete low ranked configurations:
-                        AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(i));
-                        % Provide an index to filter out low rank
-                        % configurations:
-                        % [~,ix]= hyperband_pick_top_n(AdlasInstances, n(i));
-                    end
-                end
+    else
+        % Hyperband
+        AdlasInstances = AdlasContainer( ...
+            'subject', subjix, ...
+            'RandomSeed', 1:size(PERMUTATION_INDEX{1},2), ...
+            'cvholdout', cvholdout, ...
+            'bias', BIAS, ...
+            'LambdaSeq', LambdaSeq, ...
+            'normalize', normalize, ...
+            'regularization', regularization, ...
+            'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
+    
+        n = BRACKETS.n;
+        r = BRACKETS.r;
+        for i = 1:numel(n)
+            opts.max_iter = r(i) * 1000;
+            fprintf('lambda in round %d of hyperband:\n', i);
+            disp(lambda);
+            AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
+                'cvind'          , cvind          , ...
+                'permutations'   , PERMUTATION_INDEX, ... 
+                'AdlasOpts'      , opts);
+            % Delete low ranked configurations:
+            AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(i));
+            % Provide an index to filter out low rank
+            % configurations:
+            % [~,ix]= hyperband_pick_top_n(AdlasInstances, n(i));
         end
+    end
+    
+    %% --- Package results ---
+    results = repmat(struct( ...
+        'Uz'             , [] , ...
+        'Cz'             , [] , ...
+        'Sz'             , [] , ...
+        'nz_rows'        , [] , ...
+        'subject'        , [] , ...
+        'cvholdout'      , [] , ...
+        'finalholdout'   , [] , ...
+        'lambda'         , [] , ...
+        'lambda1'        , [] , ...
+        'LambdaSeq'      , [] , ...
+        'regularization' , [] , ...
+        'bias'           , [] , ...
+        'normalize'      , [] , ...
+        'nzv'            , [] , ...
+        'coords'         , [] , ...
+        'err1'           , [] , ...
+        'err2'           , [] , ...
+        'iter'           , [] ), numel(AdlasInstances), 1);    
+    for iResult = 1:numel(AdlasInstances)
+        A = AdlasInstances(iResult);
         if ~SmallFootprint
-            for iResult = 1:numel(results)
-                results(iResult).coords = COORDS;
-                if BIAS
-                    ix = find(any(results(iResult).Uz(1:end-1,:), 2));
-                else
-                    ix = results(iResult).Uix;
-                end
-%                 for i = 1:numel(COORDS_FIELDS)
-%                     cfield = COORDS_FIELDS{i};
-%                     switch cfield
-%                         case 'ind'
-%                             tmpind = COORDS.ind(ix);
-%                             results(iResult).coords.ind = tmpind(:)'; % When writing to JSON, much more efficient as row vector.
-%                         case 'ijk'
-%                             results(iResult).coords.ijk = COORDS.ijk(ix,:);
-%                         case 'xyz'
-%                             results(iResult).coords.xyz = COORDS.xyz(ix,:);
-%                     end
-%                 end
-                for j = 1:numel(COORDS_FIELDS)
-                    cfield = COORDS_FIELDS{j};
-                    if any(strcmp(cfield, {'ijk','xyz'})) && ~isempty(COORDS.(cfield))
-                        results(iResult).coords.(cfield) = COORDS.(cfield)(ix,:);
-                    elseif any(strcmp(cfield, {'ind'})) && ~isempty(COORDS.(cfield))
-                        results(iResult).coords.(cfield) = COORDS.(cfield)(ix);
-                    end
+            results(iResult).coords = COORDS;
+            if A.bias
+                Uz = A.Adlas.X(1:end-1,:);
+            else
+                Uz = A.Adlas.X;
+            end
+            ix = find(any(Uz, 2));
+            for j = 1:numel(COORDS_FIELDS)
+                cfield = COORDS_FIELDS{j};
+                if any(strcmp(cfield, {'ijk','xyz'})) && ~isempty(COORDS.(cfield))
+                    results(iResult).coords.(cfield) = COORDS.(cfield)(ix,:);
+                elseif any(strcmp(cfield, {'ind'})) && ~isempty(COORDS.(cfield))
+                    results(iResult).coords.(cfield) = COORDS.(cfield)(ix);
                 end
             end
+            results(iResult).Uz = Uz;
+            results(iResult).Cz = A.Adlas.A * A.Adlas.X;
+            results(iResult).nz_rows = any(Uz,2);
+            results(iResult).cvholdout = A.cvholdout;
+            results(iResult).finalholdout = finalholdout;
+            results(iResult).lambda = A.lambda;
+            results(iResult).lambda1 = A.lambda1;
+            results(iResult).LambdaSeq = A.LambdaSeq;
+            results(iResult).regularization = A.regularization;
+            results(iResult).normalize = A.normalize;
+            results(iResult).err1 = A.Adlas.testError;
+            results(iResult).err2 = A.Adlas.trainingError;
+            results(iResult).iter = A.Adlas.iter;
+            results(iResult).RandomSeed = RandomSeed(A.RandomSeed);
         end
     end
 
     fprintf('Saving stuff.....\n');
-
-    [results.subject] = deal(subjix);
-    [results.finalholdout] = deal(finalholdoutInd);
-    [results.bias] = deal(BIAS);
-    [results.RandomSeed] = deal(RandomSeed);
 
     %% Save results
     rinfo = whos('results');
@@ -440,60 +406,60 @@ function WholeBrain_RSA(varargin)
 
     fprintf('Done!\n');
     
-    function condition_handling_searchlight()
-        X = uncell(X);
-        S = uncell(S);
-        cvind = uncell(cvind);
-        cvset = unique(cvind);
-        colfilter = uncell(colfilter);
-
-        % create a 3D binary mask
-        [mask,dxyz] = coordsTo3dMask(metadata.coords.xyz);
-
-        % Translate slradius (in mm) to sl voxels
-        % N.B. Because voxels need not be symmetric cubes, but Seachmight will
-        % generate symmetric spheres from a single radius parameter, we need to
-        % select one value of the three that will be produced in this step. I am
-        % arbitrarily choosing the max, to err on the side of being inclusive.
-        slradius_ijk = max(round(slRadius ./ dxyz));
-
-        % create the "meta" neighbourhood structure
-        meta = createMetaFromMask(mask, 'radius', slradius_ijk);
-        labels = metadata.itemindex(rowfilter);
-        labelsRun = metadata.runindex(rowfilter);
-
-        results.similarity_measure = slSim_Measure;
-        if strcmpi('nrsa',slSim_Measure)
-            error('Searchlight Network RSA is not implemented properly yet. Exiting...');
-
-        else
-            fprintf('PermutationTest: %d\n', PermutationTest);
-            if PermutationTest
-                for ic = unique(cvind)'
-                    fprintf('Permuting CV %d...\n', ic);
-                    s = S(cvind==ic, cvind==ic);
-                    n = size(s,1);
-                    permix = randperm(n);
-                    S(cvind==ic, cvind==ic) = S(permix, permix);
-                end
-            end
-
-            [structureScoreMap] = computeSimilarityStructureMap(...
-                slSim_Measure,...
-                X,labels,...
-                X,labels,...
-                'meta',meta,'similarityStructure',S,...
-                'permutationTest',slPermutationType, slPermutationCount,...
-                'groupLabels',labelsRun,labelsRun);
-
-            results.structureScoreMap = structureScoreMap;
-            results.RandomSeed = RandomSeed;
-        end
-
-        for i_nested = 1:numel(results)
-            results(i_nested).coords = COORDS;
-        end
-    end
+%     function condition_handling_searchlight()
+%         X = uncell(X);
+%         S = uncell(S);
+%         cvind = uncell(cvind);
+%         cvset = unique(cvind);
+%         colfilter = uncell(colfilter);
+% 
+%         % create a 3D binary mask
+%         [mask,dxyz] = coordsTo3dMask(metadata.coords.xyz);
+% 
+%         % Translate slradius (in mm) to sl voxels
+%         % N.B. Because voxels need not be symmetric cubes, but Seachmight will
+%         % generate symmetric spheres from a single radius parameter, we need to
+%         % select one value of the three that will be produced in this step. I am
+%         % arbitrarily choosing the max, to err on the side of being inclusive.
+%         slradius_ijk = max(round(slRadius ./ dxyz));
+% 
+%         % create the "meta" neighbourhood structure
+%         meta = createMetaFromMask(mask, 'radius', slradius_ijk);
+%         labels = metadata.itemindex(rowfilter);
+%         labelsRun = metadata.runindex(rowfilter);
+% 
+%         results.similarity_measure = slSim_Measure;
+%         if strcmpi('nrsa',slSim_Measure)
+%             error('Searchlight Network RSA is not implemented properly yet. Exiting...');
+% 
+%         else
+%             fprintf('PermutationTest: %d\n', PermutationTest);
+%             if PermutationTest
+%                 for ic = unique(cvind)'
+%                     fprintf('Permuting CV %d...\n', ic);
+%                     s = S(cvind==ic, cvind==ic);
+%                     n = size(s,1);
+%                     permix = randperm(n);
+%                     S(cvind==ic, cvind==ic) = S(permix, permix);
+%                 end
+%             end
+% 
+%             [structureScoreMap] = computeSimilarityStructureMap(...
+%                 slSim_Measure,...
+%                 X,labels,...
+%                 X,labels,...
+%                 'meta',meta,'similarityStructure',S,...
+%                 'permutationTest',slPermutationType, slPermutationCount,...
+%                 'groupLabels',labelsRun,labelsRun);
+% 
+%             results.structureScoreMap = structureScoreMap;
+%             results.RandomSeed = RandomSeed;
+%         end
+% 
+%         for i_nested = 1:numel(results)
+%             results(i_nested).coords = COORDS;
+%         end
+%     end
 end
 
 function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1, LambdaSeq)
@@ -567,9 +533,9 @@ end
 function b = isMatOrJSON(x)
     b = any(strcmpi(x, {'mat','json'}));
 end
-function b = isscalarOrEmpty(x)
-    b = isscalar(x) || isempty(x);
-end
+% function b = isscalarOrEmpty(x)
+%     b = isscalar(x) || isempty(x);
+% end
 
 % OTHER REGULARIZATION METHODS
 % ============================

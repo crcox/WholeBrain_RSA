@@ -1,6 +1,6 @@
 function [ TopN_by_group, ix ] = hyperband_pick_top_n( AdlasInstances, n, maximize)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+%HYPERBAND_PICK_TOP_N Select models that survive current hyperband round
+%   Provided a set of Adlas instances (bundled in AdlasContainers)
     if nargin < 3
         maximize = false;
     end

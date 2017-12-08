@@ -16,21 +16,13 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
     addParameter(p , 'permutations'            , []       );
     addParameter(p , 'AdlasOpts'               , struct() );
     addParameter(p , 'Verbose'                 , true     );
-    parse(p, C, V, regularization, target_type, varargin{:});
-
-    if numel(p.Results.V) > 1
-        error('crcox:TooManySubjects', 'Each call to "learn_similarity_encoding" currently supports only a single subject.')
-    end
-    if numel(p.Results.lambda) == numel(p.Results.lambda1) && numel(p.Results.lambda) > 1
-        warning('crcox:NotImplemented', 'Note that HYPERBAND is not yet implemented for GrOWL. Lambda and Lambda1 will be crossed, as if grid searching.');
-    end
+    parse(p, AdlasInstances, C, V, regularization, varargin{:});
     
     cvind          = p.Results.cvind;
     permutations   = p.Results.permutations;
     options        = p.Results.AdlasOpts;
     VERBOSE        = p.Results.Verbose;
     
-
     if strcmp(regularization, {'grOWL','grOWL2'});
         assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
     end
@@ -39,7 +31,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
     Corig = C;
 
     if VERBOSE
-        fprintf('%5s%6s%11s %11s  %11s %11s  \n', 'cv','lam','lam1','test err','train err','n vox')
+        fprintf('%8s%8s%8s%8s%8s%8s%8s%8s%16s\n', 'cv','lam','lam1','err1','err2','nzvox','nvox','iter','status')
     end
 
     for i = 1:numel(AdlasInstances)
@@ -50,6 +42,9 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         normalize = AdlasInstances(i).normalize;
         BIAS = AdlasInstances(i).bias;
         permutation_index = permutations{subix}(:,permix);
+        lam = AdlasInstances(i).lambda;
+        lam1 = AdlasInstances(i).lambda1;
+        LambdaSeq = AdlasInstances(i).LambdaSeq;
 
         train_set  = cvind{subix} ~= cvix; % CHECK THIS
 
@@ -137,22 +132,28 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         %   By not trying to train these models any more (which is fine,
         %   because they have converged on a solution already, anyway),
         %   this error should be avoided.
-        if isempty(AdlasInstances(iii).Adlas)
-            AdlasInstances(iii).Adlas = Adlas(V, C, lamseq, train_set, options);
-            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
-        elseif AdlasInstances(iii).status == 2
-            AdlasInstances(iii).Adlas = AdlasInstances(iii).Adlas.train(options);
+        if isempty(AdlasInstances(i).Adlas)
+            AdlasInstances(i).Adlas = Adlas(V, C, lamseq, train_set, options);
+            AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
+        elseif AdlasInstances(i).status == 2
+            AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
         else
         % Do nothing
         end
-        AdlasInstances(iii).Adlas.test();
+        AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.test();
+        err1 = AdlasInstances(i).Adlas.testError;
+        err2 = AdlasInstances(i).Adlas.trainingError;
+        Unz = nnz(any(AdlasInstances(i).Adlas.X, 2));
+        nv = size(AdlasInstances(i).Adlas.X, 1);
+        if isempty(lam1)
+            lam1 = nan;
+        end
 
         if VERBOSE
-            fprintf('%3d | %6.2f | %6.2f | %10.2f | %10.2f | %10d | %10d\n', ...
-                icv,lam,lam1,err1,err2,Unz,nv);
+            fprintf('%8d%8.2f%8.2f%8.2f%8.2f%8d%8d%8d%16s\n', ...
+                cvix,lam,lam1,err1,err2,Unz,nv,AdlasInstances(i).Adlas.iter,AdlasInstances(i).Adlas.message);
         end
     end
-    fprintf('Exit status -- %s (%d iterations)\n', info.message, info.iter);
 end
 
 % OLD PERMUTATION ALGORITHM

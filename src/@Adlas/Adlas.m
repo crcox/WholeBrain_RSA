@@ -62,7 +62,7 @@ classdef Adlas
             obj.LambdaSequence = LambdaSequence;
             if isempty(trainingFilter)
                 obj.trainingFilter = true(obj.n, 1);
-            elseif numel(trainingFilter) ~= obj.n;
+            elseif numel(trainingFilter) ~= size(A,1);
                 error('The trainingFilter must have as many elements as there are targets (i.e., examples in the dataset).');
             else
                 obj.trainingFilter = trainingFilter;

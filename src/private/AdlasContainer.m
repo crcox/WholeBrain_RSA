@@ -45,6 +45,11 @@ function ac = AdlasContainer(varargin)
     fn = fieldnames(expand_struct); n = numel(fn);
     expand_struct_p = structfun(@pack, expand_struct, 'UniformOutput', 0);
     expand_struct_pu = structfun(@unique, expand_struct_p, 'UniformOutput', 0);
+    for i = 1:n
+        if isempty(expand_struct_pu.(fn{i}));
+            expand_struct_pu.(fn{i}) = {[]};
+        end
+    end
     expand_index = struct2cell(structfun(@(x) 1:numel(x), expand_struct_pu, 'UniformOutput', 0));
     B = cell(1,n);
     [B{:}] = ndgrid(expand_index{:});
@@ -71,11 +76,11 @@ function ac = AdlasContainer(varargin)
     end
     expand_cell = [fn(:), tmp(:)]'; % force to be a row vectors
     ac = struct(expand_cell{:});
-    function c = pack(x)
-        if ischar(x)
-            c = {x};
-        else
-            c = x;
-        end
+end
+function c = pack(x)
+    if ischar(x)
+        c = {x};
+    else
+        c = x;
     end
 end
