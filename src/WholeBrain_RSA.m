@@ -79,7 +79,11 @@ function WholeBrain_RSA(varargin)
     sim_source              = p.Results.sim_source;
     sim_metric              = p.Results.sim_metric;
     filter_labels           = p.Results.filters;
-    datafile                = p.Results.data;
+    if iscell(p.Results.data)
+        datafiles = p.Results.data;
+    else
+        datafiles = {p.Results.data};
+    end
     data_varname            = p.Results.data_varname;
     cvscheme                = p.Results.cvscheme;
     cvholdout               = p.Results.cvholdout;
@@ -141,13 +145,16 @@ function WholeBrain_RSA(varargin)
     %% Load metadata
     StagingContainer = load(metafile, metadata_varname);
     metadata = StagingContainer.(metadata_varname); clear StagingContainer;
-    [metadata, subjix] = subsetMetadata(metadata, datafile, FMT_subjid);
+    [metadata, subjix] = subsetMetadata(metadata, datafiles, FMT_subjid);
     N = length(metadata);
     n = [metadata.nrow];
     d = [metadata.ncol];
 
     %% Load data
-    X = loadData(datafile, data_varname);
+    X = cell(max(subjix),1);
+    for i = 1:numel(datafiles);
+        X(subjix(i)) = loadData(datafiles{i}, data_varname);
+    end
 %     if iscell(X) && numel(X) == 1
 %         X = X{1};
 %     end
@@ -163,18 +170,19 @@ function WholeBrain_RSA(varargin)
     %%  --- and ---
     %% Load CV indexes, identifying the final holdout set.
     % N.B. the final holdout set is excluded from the rowfilter.
-    rowfilter = cell(N,1);
-    colfilter = cell(N,1);
-    cvind     = cell(N,1);
-    cvindAll  = cell(N,1);
-    for i = 1:N
+    rowfilter = cell(max(subjix),1);
+    colfilter = cell(max(subjix),1);
+    cvind     = cell(max(subjix),1);
+    cvindAll  = cell(max(subjix),1);
+    for i = subjix
+        M = selectbyfield(metadata,'subject', i);
         if isempty(filter_labels)
             rowfilter{i} = true(1,n(i));
             colfilter{i} = true(1,d(i));
         else
-            [rowfilter{i},colfilter{i}] = composeFilters(metadata(i).filters, filter_labels);
+            [rowfilter{i},colfilter{i}] = composeFilters(M.filters, filter_labels);
         end
-        cvindAll{i} = metadata(i).cvind(:,cvscheme);
+        cvindAll{i} = M.cvind(:,cvscheme);
         finalholdout = cvindAll{i} == finalholdoutInd;
         % Add the final holdout set to the rowfilter
         rowfilter{i} = forceRowVec(rowfilter{i}) & forceRowVec(~finalholdout);
@@ -193,7 +201,12 @@ function WholeBrain_RSA(varargin)
     fprintf('%12s: %s\n', 'sim_source', sim_source);
     fprintf('%12s: %s\n', 'sim_metric', sim_metric);
     fprintf('\n');
-    S = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter);
+    tmpS = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter(subjix));
+    S = cell(max(subjix),1);
+    for i = 1:numel(tmpS);
+        S(subjix(i)) = tmpS(i);
+    end
+    clear tmpS;
 
     % Apply the column filter to the coordinates in the metadata structure
     for i = 1:numel(metadata)
@@ -212,15 +225,15 @@ function WholeBrain_RSA(varargin)
     fprintf('Data Dimensions\n');
     fprintf('%16s%16s%16s\n','subject','initial','filtered');
     fprintf('%s\n',repmat('-',1,16*3));
-    for ii = 1:N
-        fprintf('%16d (%6d,%6d) (%6d,%6d)\n',subjix(ii),numel(rowfilter{ii}),numel(colfilter{ii}),size(X{ii},1),size(X{ii},2));
+    for i = subjix
+        fprintf('%16d (%6d,%6d) (%6d,%6d)\n',i,numel(rowfilter{i}),numel(colfilter{i}),size(X{i},1),size(X{i},2));
     end
     fprintf('\n');
     
     fprintf('Data loaded and processed.\n');
     
-    C = cell(size(S));
-    for i = 1:numel(S)
+    C = cell(max(subjix),1);
+    for i = subjix
         switch target_type
             case 'similarity'
                 [C{i}, r] = sqrt_truncate_r(S{i}, tau);
@@ -258,7 +271,7 @@ function WholeBrain_RSA(varargin)
             case 'manual'
                 StagingArea = load(PermutationIndex, 'PERMUTATION_INDEX');
                 PERMUTATION_INDEX = StagingArea.PERMUTATION_INDEX;
-                for i = 1:numel(C)
+                for i = subjix
                     %  This is kind of a hack to handle the fact eliminating
                     %  outlying rows and rows belonging to the final holdout
                     %  set will create gaps in the index.
@@ -270,8 +283,8 @@ function WholeBrain_RSA(varargin)
                 error('crcox:NotImplemented', 'Permutations need to be specified manually.');
         end
     else
-        PERMUTATION_INDEX = cell(size(C));
-        for i = 1:numel(C)
+        PERMUTATION_INDEX = cell(max(subjix),1);
+        for i = subjix
             PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
             RandomSeed = 0;
         end
@@ -282,7 +295,7 @@ function WholeBrain_RSA(varargin)
         % Grid search
         AdlasInstances = AdlasContainer( ...
             'subject', subjix, ...
-            'RandomSeed', 1:size(PERMUTATION_INDEX{1},2), ...
+            'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
             'cvholdout', cvholdout, ...
             'bias', BIAS, ...
             'LambdaSeq', LambdaSeq, ...
@@ -299,7 +312,7 @@ function WholeBrain_RSA(varargin)
         % Hyperband
         AdlasInstances = AdlasContainer( ...
             'subject', subjix, ...
-            'RandomSeed', 1:size(PERMUTATION_INDEX{1},2), ...
+            'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
             'cvholdout', cvholdout, ...
             'bias', BIAS, ...
             'LambdaSeq', LambdaSeq, ...
