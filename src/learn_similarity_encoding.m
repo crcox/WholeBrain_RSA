@@ -133,7 +133,8 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         %   because they have converged on a solution already, anyway),
         %   this error should be avoided.
         if isempty(AdlasInstances(i).Adlas)
-            AdlasInstances(i).Adlas = Adlas(V, C, lamseq, train_set, options);
+            % LambdaSeq must be a column vector
+            AdlasInstances(i).Adlas = Adlas(V, C, lamseq(:), train_set, options);
             AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
         elseif AdlasInstances(i).status == 2
             AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
