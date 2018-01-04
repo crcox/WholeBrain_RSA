@@ -64,7 +64,7 @@ function WholeBrain_RSA(varargin)
     % private function.
     assertRequiredParameters(p.Results);
 
-    DEBUG                   = p.Results.debug;
+%     DEBUG                   = p.Results.debug;
     PermutationTest         = p.Results.PermutationTest;
     PermutationMethod       = p.Results.PermutationMethod;
     PermutationIndex        = p.Results.PermutationIndex;
@@ -146,7 +146,7 @@ function WholeBrain_RSA(varargin)
     StagingContainer = load(metafile, metadata_varname);
     metadata = StagingContainer.(metadata_varname); clear StagingContainer;
     [metadata, subjix] = subsetMetadata(metadata, datafiles, FMT_subjid);
-    N = length(metadata);
+%     N = length(metadata);
     n = [metadata.nrow];
     d = [metadata.ncol];
 
@@ -310,20 +310,25 @@ function WholeBrain_RSA(varargin)
 
     else
         % Hyperband
-        AdlasInstances = AdlasContainer( ...
-            'subject', subjix, ...
-            'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
-            'cvholdout', cvholdout, ...
-            'bias', BIAS, ...
-            'LambdaSeq', LambdaSeq, ...
-            'normalize', normalize, ...
-            'regularization', regularization, ...
-            'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
+        if exist('checkpoint.mat','file')
+            load('checkpoint.mat', 'AdlasInstances', 'bracket_index');
+        else
+            AdlasInstances = AdlasContainer( ...
+                'subject', subjix, ...
+                'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
+                'cvholdout', cvholdout, ...
+                'bias', BIAS, ...
+                'LambdaSeq', LambdaSeq, ...
+                'normalize', normalize, ...
+                'regularization', regularization, ...
+                'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
+            bracket_index = 1;
+        end
     
         n = BRACKETS.n;
         r = BRACKETS.r;
-        for i = 1:numel(n)
-            opts.max_iter = r(i) * 1000;
+        while 1
+            opts.max_iter = r(i) * 1000; % This 1000 is an important constant... might want to think about this/expose it as a parameter.
             fprintf('lambda in round %d of hyperband:\n', i);
             disp(lambda);
             AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
@@ -335,6 +340,15 @@ function WholeBrain_RSA(varargin)
             % Provide an index to filter out low rank
             % configurations:
             % [~,ix]= hyperband_pick_top_n(AdlasInstances, n(i));
+            bracket_index = bracket_index + 1;
+            if bracket_index < numel(n)
+                save('checkpoint.mat', 'AdlasInstances', 'bracket_index');
+            else
+                if exist('checkpoint.mat', 'file')
+                    delete('checkpoint.mat');
+                end
+                break
+            end
         end
     end
     
