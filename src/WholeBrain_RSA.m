@@ -201,6 +201,13 @@ function WholeBrain_RSA(varargin)
     fprintf('%12s: %s\n', 'sim_source', sim_source);
     fprintf('%12s: %s\n', 'sim_metric', sim_metric);
     fprintf('\n');
+    
+    sep = strfind(target_type,'_');
+    if ~isempty(sep)
+        target_normalization = target_type(sep(1)+1:end);
+        target_type(sep(1):end) = [];
+    end
+ 
     tmpS = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter(subjix));
     S = cell(max(subjix),1);
     for i = 1:numel(tmpS);
@@ -238,13 +245,13 @@ function WholeBrain_RSA(varargin)
             case 'similarity'
                 [C{i}, r] = sqrt_truncate_r(S{i}, tau);
                 fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
-            case 'similarity_centered'
-                [c, r] = sqrt_truncate_r(S{i}, tau);
-                C{i} = bsxfun(@minus, c, mean(c));
-                fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
             case 'embedding'
                 C{i} = S{i};
 %                 r = size(C{i},2);
+        end
+        switch target_normalization
+            case 'centered'
+                C{i} = bsxfun(@minus, C{i}, mean(C{i}));
         end
     end
 
