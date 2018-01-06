@@ -339,15 +339,15 @@ function WholeBrain_RSA(varargin)
         n = BRACKETS.n;
         r = BRACKETS.r;
         while 1
-            opts.max_iter = r(i) * 1000; % This 1000 is an important constant... might want to think about this/expose it as a parameter.
-            fprintf('lambda in round %d of hyperband:\n', i);
+            opts.max_iter = r(bracket_index) * 1000; % This 1000 is an important constant... might want to think about this/expose it as a parameter.
+            fprintf('lambda in round %d of hyperband:\n', bracket_index);
             disp(lambda);
             AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
                 'cvind'          , cvind          , ...
                 'permutations'   , PERMUTATION_INDEX, ... 
                 'AdlasOpts'      , opts);
             % Delete low ranked configurations:
-            AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(i));
+            AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(bracket_index));
             % Provide an index to filter out low rank
             % configurations:
             % [~,ix]= hyperband_pick_top_n(AdlasInstances, n(i));
