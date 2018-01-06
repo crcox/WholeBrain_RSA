@@ -136,7 +136,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
             % LambdaSeq must be a column vector
             AdlasInstances(i).Adlas = Adlas(V, C, lamseq(:), train_set, options);
             AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
-        elseif AdlasInstances(i).status == 2
+        elseif AdlasInstances(i).Adlas.status == 2
             AdlasInstances(i).Adlas = AdlasInstances(i).Adlas.train(options);
         else
         % Do nothing
