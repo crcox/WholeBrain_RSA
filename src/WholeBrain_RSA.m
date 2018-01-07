@@ -410,7 +410,7 @@ function WholeBrain_RSA(varargin)
             results(iResult).nzv = nnz(results(iResult).nz_rows);
             results(iResult).nvox = numel(results(iResult).nz_rows);
             results(iResult).cvholdout = A.cvholdout;
-            results(iResult).finalholdout = finalholdout;
+            results(iResult).finalholdout = finalholdoutInd;
             results(iResult).lambda = A.lambda;
             results(iResult).lambda1 = A.lambda1;
             results(iResult).LambdaSeq = A.LambdaSeq;

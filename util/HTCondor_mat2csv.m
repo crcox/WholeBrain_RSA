@@ -97,10 +97,12 @@ function HTCondor_mat2csv(ResultDir, varargin)
         jobDir = jobDirs{i}; %fullfile(RESULT_DIR, jobDirs{i});
         pfile  = fullfile(jobDir,PARAMS_FILE);
         rfile  = fullfile(jobDir,RESULT_FILE);
+        PARAMS_LOADED = 0;
         if exist(rfile, 'file') && exist(pfile, 'file')
             r = load(rfile, 'results');
             if isempty(r.results(1).subject)
                 p = loadjson(pfile);
+                PARAMS_LOADED = 1;
                 if iscell(p.data) && numel(p.data) > 1 && SHOW_WARNING
                     warning('Subject ID is missing from results structure and params specifies multiple data files. Cannot auto-populate subject IDs');
                     SHOW_WARNING = 0;
@@ -144,6 +146,15 @@ function HTCondor_mat2csv(ResultDir, varargin)
                     R(ii).nzv = nnz(R(ii).nz_rows);
                     R(ii).nvox = numel(R(ii).nz_rows);
                 end
+            end
+            if isfield(R,'finalholdout')&& islogical(R(1).finalholdout)
+                if ~PARAMS_LOADED
+                    p = loadjson(pfile);
+%                     PARAMS_LOADED = 1;
+                end
+                for ii = 1:numel(R)
+                    R(ii).finalholdout = p.finalholdout;
+                end  
             end
             rc = squeeze(struct2cell(R));
             
