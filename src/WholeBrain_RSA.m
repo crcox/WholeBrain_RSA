@@ -396,7 +396,10 @@ function WholeBrain_RSA(varargin)
             end
             results(iResult).Uz = Uz;
             results(iResult).Cz = A.Adlas.A * A.Adlas.X;
+            results(iResult).subject = A.subject;
+            results(iResult).bias = A.bias;
             results(iResult).nz_rows = any(Uz,2);
+            results(iResult).nzvox = sum(any(Uz,2));
             results(iResult).cvholdout = A.cvholdout;
             results(iResult).finalholdout = finalholdout;
             results(iResult).lambda = A.lambda;
