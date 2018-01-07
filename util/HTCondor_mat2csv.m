@@ -86,6 +86,7 @@ function HTCondor_mat2csv(ResultDir, varargin)
     header = fieldnames(R);
     fprintf(fid, fmt_h, header{:});
     nchar = 0;
+    SHOW_WARNING = 1;
     for i = 1:nJobDirs
         if ~QUIET
             fprintf(repmat('\b', 1, nchar));
@@ -98,8 +99,20 @@ function HTCondor_mat2csv(ResultDir, varargin)
         rfile  = fullfile(jobDir,RESULT_FILE);
         if exist(rfile, 'file') && exist(pfile, 'file')
             r = load(rfile, 'results');
+            if isempty(r.results(1).subject)
+                p = loadjson(pfile);
+                if iscell(p.data) && numel(p.data) > 1 && SHOW_WARNING
+                    warning('Subject ID is missing from results structure and params specifies multiple data files. Cannot auto-populate subject IDs');
+                    SHOW_WARNING = 0;
+                else
+                    subjectID = extractSubjectID(p.data, p.subject_id_fmt);
+                end
+            end
             z = ismember(SKIP,fieldnames(r.results));
             R = rmfield(r.results, SKIP(z));
+            if isempty(r.results(1).subject)
+                [R.subject] = deal(subjectID);
+            end
             if correct_nzv
                 for ii = 1:numel(R)
                     l2norm = sum(r.results(ii).Uz .^ 2, 2);
@@ -124,6 +137,12 @@ function HTCondor_mat2csv(ResultDir, varargin)
                     if ischar(R(ii).subject);
                         R(ii).subject = sscanf(R(ii).subject, 'BM%d.mat');
                     end
+                end
+            end
+            if isfield(R,'nzv')&& isempty(R(1).nzv) && isfield(R,'nz_rows') && ~isempty(R(1).nz_rows)
+                for ii = 1:numel(R)
+                    R(ii).nzv = nnz(R(ii).nz_rows);
+                    R(ii).nvox = numel(R(ii).nz_rows);
                 end
             end
             rc = squeeze(struct2cell(R));
