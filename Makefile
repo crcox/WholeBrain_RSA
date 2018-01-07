@@ -1,7 +1,7 @@
 export MATLABDIR=/usr/local/MATLAB/R2014b
 export MCC=$(MATLABDIR)/bin/mcc
 export MEX=$(MATLABDIR)/bin/mex
-export MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm -N
+export MFLAGS=-m -R -singleCompThread -R -nodisplay -R -nojvm -N -p stats
 TOP := $(shell pwd)
 SRCTAR=source_code.tar.gz
 SRC=src

@@ -201,6 +201,13 @@ function WholeBrain_RSA(varargin)
     fprintf('%12s: %s\n', 'sim_source', sim_source);
     fprintf('%12s: %s\n', 'sim_metric', sim_metric);
     fprintf('\n');
+    
+    sep = strfind(target_type,'_');
+    if ~isempty(sep)
+        target_normalization = target_type(sep(1)+1:end);
+        target_type(sep(1):end) = [];
+    end
+ 
     tmpS = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter(subjix));
     S = cell(max(subjix),1);
     for i = 1:numel(tmpS);
@@ -238,13 +245,13 @@ function WholeBrain_RSA(varargin)
             case 'similarity'
                 [C{i}, r] = sqrt_truncate_r(S{i}, tau);
                 fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
-            case 'similarity_centered'
-                [c, r] = sqrt_truncate_r(S{i}, tau);
-                C{i} = bsxfun(@minus, c, mean(c));
-                fprintf('S decomposed into %d dimensions (tau=%.2f)\n', r, tau)
             case 'embedding'
                 C{i} = S{i};
 %                 r = size(C{i},2);
+        end
+        switch target_normalization
+            case 'centered'
+                C{i} = bsxfun(@minus, C{i}, mean(C{i}));
         end
     end
 
@@ -332,15 +339,15 @@ function WholeBrain_RSA(varargin)
         n = BRACKETS.n;
         r = BRACKETS.r;
         while 1
-            opts.max_iter = r(i) * 1000; % This 1000 is an important constant... might want to think about this/expose it as a parameter.
-            fprintf('lambda in round %d of hyperband:\n', i);
+            opts.max_iter = r(bracket_index) * 1000; % This 1000 is an important constant... might want to think about this/expose it as a parameter.
+            fprintf('lambda in round %d of hyperband:\n', bracket_index);
             disp(lambda);
             AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
                 'cvind'          , cvind          , ...
                 'permutations'   , PERMUTATION_INDEX, ... 
                 'AdlasOpts'      , opts);
             % Delete low ranked configurations:
-            AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(i));
+            AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(bracket_index));
             % Provide an index to filter out low rank
             % configurations:
             % [~,ix]= hyperband_pick_top_n(AdlasInstances, n(i));
