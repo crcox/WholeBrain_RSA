@@ -201,13 +201,15 @@ function WholeBrain_RSA(varargin)
     fprintf('%12s: %s\n', 'sim_source', sim_source);
     fprintf('%12s: %s\n', 'sim_metric', sim_metric);
     fprintf('\n');
-    
+
     sep = strfind(target_type,'_');
-    if ~isempty(sep)
+    if isempty(sep)
+        target_normalization = [];
+    else
         target_normalization = target_type(sep(1)+1:end);
         target_type(sep(1):end) = [];
     end
- 
+
     tmpS = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter(subjix));
     S = cell(max(subjix),1);
     for i = 1:numel(tmpS);
@@ -236,9 +238,9 @@ function WholeBrain_RSA(varargin)
         fprintf('%16d (%6d,%6d) (%6d,%6d)\n',i,numel(rowfilter{i}),numel(colfilter{i}),size(X{i},1),size(X{i},2));
     end
     fprintf('\n');
-    
+
     fprintf('Data loaded and processed.\n');
-    
+
     C = cell(max(subjix),1);
     for i = subjix
         switch target_type
@@ -252,6 +254,8 @@ function WholeBrain_RSA(varargin)
         switch target_normalization
             case 'centered'
                 C{i} = bsxfun(@minus, C{i}, mean(C{i}));
+            otherwise
+                C{i} = C{i};
         end
     end
 
@@ -335,7 +339,7 @@ function WholeBrain_RSA(varargin)
                 'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
             bracket_index = 1;
         end
-    
+
         n = BRACKETS.n;
         r = BRACKETS.r;
         while 1
@@ -362,7 +366,7 @@ function WholeBrain_RSA(varargin)
             end
         end
     end
-    
+
     %% --- Package results ---
     results = repmat(struct( ...
         'Uz'             , [] , ...
