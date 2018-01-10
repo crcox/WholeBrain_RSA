@@ -412,25 +412,25 @@ function WholeBrain_RSA(varargin)
             end
             results(iResult).Uz = Uz;
             results(iResult).Cz = A.Adlas.A * A.Adlas.X;
-            results(iResult).subject = A.subject;
-            results(iResult).bias = A.bias;
-            results(iResult).nz_rows = any(Uz,2);
-            results(iResult).nzv = nnz(results(iResult).nz_rows);
-            results(iResult).nvox = numel(results(iResult).nz_rows);
-            results(iResult).cvholdout = A.cvholdout;
-            results(iResult).finalholdout = finalholdoutInd;
-            results(iResult).lambda = A.lambda;
-            results(iResult).lambda1 = A.lambda1;
-            results(iResult).LambdaSeq = A.LambdaSeq;
-            results(iResult).regularization = A.regularization;
-            results(iResult).target_normalization = target_normalization;
-            results(iResult).tau = tau;
-            results(iResult).normalize = A.normalize;
-            results(iResult).err1 = A.Adlas.testError;
-            results(iResult).err2 = A.Adlas.trainingError;
-            results(iResult).iter = A.Adlas.iter;
-            results(iResult).RandomSeed = RandomSeed(A.RandomSeed);
         end
+        results(iResult).subject = A.subject;
+        results(iResult).bias = A.bias;
+        results(iResult).nz_rows = any(Uz,2);
+        results(iResult).nzv = nnz(results(iResult).nz_rows);
+        results(iResult).nvox = numel(results(iResult).nz_rows);
+        results(iResult).cvholdout = A.cvholdout;
+        results(iResult).finalholdout = finalholdoutInd;
+        results(iResult).lambda = A.lambda;
+        results(iResult).lambda1 = A.lambda1;
+        results(iResult).LambdaSeq = A.LambdaSeq;
+        results(iResult).regularization = A.regularization;
+        results(iResult).target_normalization = target_normalization;
+        results(iResult).tau = tau;
+        results(iResult).normalize = A.normalize;
+        results(iResult).err1 = A.Adlas.testError;
+        results(iResult).err2 = A.Adlas.trainingError;
+        results(iResult).iter = A.Adlas.iter;
+        results(iResult).RandomSeed = RandomSeed(A.RandomSeed);
     end
 
     fprintf('Saving stuff.....\n');
