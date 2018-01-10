@@ -254,6 +254,8 @@ function WholeBrain_RSA(varargin)
         switch target_normalization
             case 'centered'
                 C{i} = bsxfun(@minus, C{i}, mean(C{i}));
+            case 'zscore'
+                C{i} = zscore(C{i});
             otherwise
                 C{i} = C{i};
         end
