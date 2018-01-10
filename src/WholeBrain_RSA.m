@@ -204,7 +204,7 @@ function WholeBrain_RSA(varargin)
 
     sep = strfind(target_type,'_');
     if isempty(sep)
-        target_normalization = [];
+        target_normalization = 'none';
     else
         target_normalization = target_type(sep(1)+1:end);
         target_type(sep(1):end) = [];
