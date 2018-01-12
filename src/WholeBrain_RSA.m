@@ -412,13 +412,13 @@ function WholeBrain_RSA(varargin)
         'iter'           , [] ), numel(AdlasInstances), 1);    
     for iResult = 1:numel(AdlasInstances)
         A = AdlasInstances(iResult);
+        if A.bias
+            Uz = A.Adlas.X(1:end-1,:);
+        else
+            Uz = A.Adlas.X;
+        end
         if ~SmallFootprint
             results(iResult).coords = COORDS;
-            if A.bias
-                Uz = A.Adlas.X(1:end-1,:);
-            else
-                Uz = A.Adlas.X;
-            end
             ix = find(any(Uz, 2));
             for j = 1:numel(COORDS_FIELDS)
                 cfield = COORDS_FIELDS{j};
