@@ -35,14 +35,13 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
 
     for i = 1:numel(AdlasInstances)
         subix = AdlasInstances(i).subject;
-        permix = AdlasInstances(i).RandomSeed;
         cvix = AdlasInstances(i).cvholdout;
         regularization = AdlasInstances(i).regularization;
         normalize_data = AdlasInstances(i).normalize_data;
         normalize_target = AdlasInstances(i).normalize_target;
         normalizewrt = AdlasInstances(i).normalizewrt;
         BIAS = AdlasInstances(i).bias;
-        permutation_index = permutations{subix}(:,permix);
+        P = selectbyfield(permutations,'subject', subix, 'RandomSeed', AdlasInstances(i).RandomSeed);
         lam = AdlasInstances(i).lambda;
         lam1 = AdlasInstances(i).lambda1;
         LambdaSeq = AdlasInstances(i).LambdaSeq;
@@ -50,7 +49,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         train_set  = cvind{subix} ~= cvix; % CHECK THIS
 
         V = Vorig{subix};
-        C = Corig{subix}(permutation_index,:);
+        C = Corig{subix}(P.index,:);
         switch normalizewrt
             case 'all_examples'
                 V = normalize_columns(V, normalize_data);
@@ -81,9 +80,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
             otherwise
                 error('%s is not an implemented regularization. check spelling', regularization);
         end
-        
-        
-        
+
         % TRAINING CONDITIONS
         % ===================
         % In case of new model:
@@ -93,7 +90,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         %
         % In case of existing model:
         % -------------------------
-        %   1. Check that status == 2, which means that the previos round
+        %   1. Check that status == 2, which means that the previous round
         %   of training stopped because it hit the iteration limit.
         %   2. If so, train for more iterations.
         %

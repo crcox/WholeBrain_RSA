@@ -283,6 +283,8 @@ function WholeBrain_RSA(varargin)
     % PERMUTATION_INDEXES.mat
     fprintf('PermutationTest: %d\n', PermutationTest);
     if PermutationTest
+        [a,b] = ndgrid(subjix,RandomSeed);
+        Permutations = struct('subject', num2cell(a),'RandomSeed', num2cell(b),'index',[]);
         switch PermutationMethod
 %                 case 'simple'
 %                     if RestrictPermutationByCV
@@ -299,16 +301,36 @@ function WholeBrain_RSA(varargin)
                     %  set will create gaps in the index.
                     [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed));
                     [~, permutation_index] = sort(ix);
-                    PERMUTATION_INDEX{i} = permutation_index;
+                    if size(permutation_index, 1) < size(C{i}, 1)
+                        remainder = rem(size(permutation_index, 1), size(C{i}, 1));
+                        if remainder > 0
+                            error('permutation_index has fewer rows than C, and number in C is not evenly divisible by number in permutation_index.');
+                        else
+                            repeatntimes = size(C{i},1) / size(permutation_index,1);
+                            warning('permutation_index has fewer rows than C, and number in C is evenly divisible by number in permutation_index. Repeating permutation_index %d times to match.', repeatntimes);
+                            CC = cell(repeatntimes, 1);
+                            for j = 1:repeatntimes
+                                CC{j} = permutation_index + (size(permutation_index, 1) * (j-1));
+                            end
+                            C{i} = cell2mat(CC);
+                        end
+                    end
+                    for j = RandomSeed
+                        P = selectbyfield(Permutations,'subject',i,'RandomSeed',j);
+                        P.index = permutation_index;
+                        Permutations = replacebyfield(Permutations, P, 'subject', i, 'RandomSeed', j);
+                    end
                 end
             otherwise
                 error('crcox:NotImplemented', 'Permutations need to be specified manually.');
         end
     else
         PERMUTATION_INDEX = cell(max(subjix),1);
+        Permutations = struct('subject', num2cell(subjix), 'RandomSeed', 0, 'index',[]);
         for i = subjix
-            PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
-            RandomSeed = 0;
+            P = selectbyfield(Permutations,'subject',i,'RandomSeed',0);
+            P.index = (1:size(C{i}, 1))';
+            Permutations = replacebyfield(Permutations, P, 'subject', i, 'RandomSeed', 0);
         end
     end
 
@@ -317,7 +339,7 @@ function WholeBrain_RSA(varargin)
         % Grid search
         AdlasInstances = AdlasContainer( ...
             'subject', subjix, ...
-            'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
+            'RandomSeed', RandomSeed, ...
             'cvholdout', cvholdout, ...
             'bias', BIAS, ...
             'LambdaSeq', LambdaSeq, ...
@@ -329,7 +351,7 @@ function WholeBrain_RSA(varargin)
             'lambda1', lambda1);
         AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
             'cvind'          , cvind          , ...
-            'permutations'   , PERMUTATION_INDEX, ... 
+            'permutations'   , Permutations, ... 
             'AdlasOpts'      , opts);
 
     else
@@ -339,7 +361,7 @@ function WholeBrain_RSA(varargin)
         else
             AdlasInstances = AdlasContainer( ...
                 'subject', subjix, ...
-                'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
+                'RandomSeed', RandomSeed, ...
                 'cvholdout', cvholdout, ...
                 'bias', BIAS, ...
                 'LambdaSeq', LambdaSeq, ...
@@ -359,7 +381,7 @@ function WholeBrain_RSA(varargin)
             disp(lambda);
             AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
                 'cvind'          , cvind          , ...
-                'permutations'   , PERMUTATION_INDEX, ... 
+                'permutations'   , Permutations, ... 
                 'AdlasOpts'      , opts);
             % Delete low ranked configurations:
             AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(bracket_index));
@@ -457,8 +479,8 @@ function WholeBrain_RSA(varargin)
         results(iResult).err1 = A.Adlas.testError;
         results(iResult).err2 = A.Adlas.trainingError;
         results(iResult).iter = A.Adlas.iter;
-        results(iResult).RandomSeed = RandomSeed(A.RandomSeed);
-        results(iResult).RandomSeed = p.Results.PermutationIndex;
+        results(iResult).RandomSeed = A.RandomSeed;
+%         results(iResult).RandomSeed = p.Results.PermutationIndex;
     end
 
     fprintf('Saving stuff.....\n');
