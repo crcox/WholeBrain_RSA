@@ -116,12 +116,12 @@ set -e
 SQUID="http://proxy.chtc.wisc.edu/SQUID/crcox"
 ## Download the runtime environment from SQUID
 download "${SQUID}/r2014b.tar.gz" 5
-tar xzf "r2014b.tar.gz"
+tar xzf "r2014b.tar.gz" && rm -v "r2014b.tar.gz"
 
 # This is an attempt to fix broken environments by shipping libraries that are
 # missing on some nodes.
 download "${SQUID}/libXmu_libXt.el6.x86_64.tgz" 5
-tar xzf "./libXmu_libXt.el6.x86_64.tgz"
+tar xzf "./libXmu_libXt.el6.x86_64.tgz" && rm -v "./libXmu_libXt.el6.x86_64.tgz"
 
 ## Download all large data files listed in URLS from SQUID
 # touch the files to ensure they exist
