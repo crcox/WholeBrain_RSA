@@ -296,27 +296,16 @@ function WholeBrain_RSA(varargin)
                 StagingArea = load(PermutationIndex, 'PERMUTATION_INDEX');
                 PERMUTATION_INDEX = StagingArea.PERMUTATION_INDEX;
                 for i = subjix
-                    %  This is kind of a hack to handle the fact eliminating
-                    %  outlying rows and rows belonging to the final holdout
-                    %  set will create gaps in the index.
-                    [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed));
-                    [~, permutation_index] = sort(ix);
-                    if size(permutation_index, 1) < size(C{i}, 1)
-                        remainder = rem(size(permutation_index, 1), size(C{i}, 1));
-                        if remainder > 0
-                            error('permutation_index has fewer rows than C, and number in C is not evenly divisible by number in permutation_index.');
-                        else
-                            repeatntimes = size(C{i},1) / size(permutation_index,1);
-                            warning('permutation_index has fewer rows than C, and number in C is evenly divisible by number in permutation_index. Repeating permutation_index %d times to match.', repeatntimes);
-                            CC = cell(repeatntimes, 1);
-                            for j = 1:repeatntimes
-                                CC{j} = permutation_index + (size(permutation_index, 1) * (j-1));
-                            end
-                            C{i} = cell2mat(CC);
-                        end
-                    end
                     for j = RandomSeed
                         P = selectbyfield(Permutations,'subject',i,'RandomSeed',j);
+                        %  This is kind of a hack to handle the fact eliminating
+                        %  outlying rows and rows belonging to the final holdout
+                        %  set will create gaps in the index.
+                        [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, j));
+                        [~, permutation_index] = sort(ix);
+                        if size(permutation_index, 1) < size(C{i}, 1)
+                            permutation_index = extend_permutation_index(permutation_index, size(C{i}, 1));
+                        end
                         P.index = permutation_index;
                         Permutations = replacebyfield(Permutations, P, 'subject', i, 'RandomSeed', j);
                     end
@@ -325,7 +314,7 @@ function WholeBrain_RSA(varargin)
                 error('crcox:NotImplemented', 'Permutations need to be specified manually.');
         end
     else
-        PERMUTATION_INDEX = cell(max(subjix),1);
+        RandomSeed = 0;
         Permutations = struct('subject', num2cell(subjix), 'RandomSeed', 0, 'index',[]);
         for i = subjix
             P = selectbyfield(Permutations,'subject',i,'RandomSeed',0);
@@ -625,6 +614,20 @@ function assertRequiredParameters(params)
     end
 end
 
+function permutation_index = extend_permutation_index(permutation_index, target_length)
+    remainder = rem(target_length, size(permutation_index, 1));
+    if remainder > 0
+        error('permutation_index has fewer rows than C, and number in C is not evenly divisible by number in permutation_index.');
+    else
+        repeatntimes = target_length / size(permutation_index,1);
+        warning('permutation_index has fewer rows than C, and number in C is evenly divisible by number in permutation_index. Repeating permutation_index %d times to match.', repeatntimes);
+        CC = cell(repeatntimes, 1);
+        for k = 1:repeatntimes
+            CC{k} = permutation_index + (size(permutation_index, 1) * (k-1));
+        end
+        permutation_index = cell2mat(CC);
+    end
+end
 function b = islogicallike(x)
     b = any(x == [1,0]);
 end
