@@ -54,9 +54,11 @@ function WholeBrain_RSA(varargin)
     addParameter(p , 'slRadius'         , []        , @isnumeric     );
     addParameter(p , 'slPermutationType', ''        , @ischar        );
     addParameter(p , 'slPermutations'   , 0         , @isscalar      );
+    % Parallel only influences the GLMNET operations, and should only be used
+    % when running locally. DO NOT USE ON CONDOR.
+    addParameter(p , 'PARALLEL'         , false   ,   @islogicallike );
     % Parameters in this section are unused in the analysis, may exist in
     % the parameter file because other progams use them.
-    addParameter(p , 'PARALLEL'         , false   ,   @islogicallike );
     addParameter(p , 'COPY'             , []                         );
     addParameter(p , 'URLS'             , []                         );
     addParameter(p , 'executable'       , []                         );
@@ -68,7 +70,12 @@ function WholeBrain_RSA(varargin)
         parse(p, varargin{:});
     else
         % From json-formatted parameter file
-        jdat = loadjson('params.json');
+        try
+            jdat = loadjson('./params.json');
+        catch ME
+            disp('Current directory does not contain "params.json".');
+            rethrow(ME);
+        end
         fields = fieldnames(jdat);
         jcell = [fields'; struct2cell(jdat)'];
         parse(p, jcell{:});
