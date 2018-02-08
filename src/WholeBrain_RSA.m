@@ -165,7 +165,9 @@ function WholeBrain_RSA(varargin)
     %% Load metadata
     StagingContainer = load(metafile, metadata_varname);
     metadata = StagingContainer.(metadata_varname); clear StagingContainer;
+    subjects = [metadata.subject];
     [metadata, subjix] = subsetMetadata(metadata, datafiles, FMT_subjid);
+    
 %     N = length(metadata);
 
     %% Load data
@@ -193,7 +195,7 @@ function WholeBrain_RSA(varargin)
     cvind     = cell(max(subjix),1);
     cvindAll  = cell(max(subjix),1);
     for i = subjix
-        M = selectbyfield(metadata,'subject', i);
+        M = selectbyfield(metadata,'subject', subjects(i));
         if isempty(filter_labels)
             rowfilter{i} = true(1,M.nrow);
             colfilter{i} = true(1,M.ncol);
