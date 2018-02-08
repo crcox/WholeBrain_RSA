@@ -2,66 +2,84 @@ function WholeBrain_RSA(varargin)
     p = inputParser;
     p.KeepUnmatched = false;
     % ----------------------Set parameters-----------------------------------------------
-    addParameter(p , 'debug'            , false     , @islogicallike );
-    addParameter(p , 'RandomSeed'       , []                         );
-    addParameter(p , 'PermutationTest'  , false     , @islogicallike );
-    addParameter(p , 'PermutationMethod', 'manual'  , @ischar        );
-    addParameter(p , 'PermutationIndex' , ''        , @ischar        );
-    addParameter(p , 'RestrictPermutationByCV', false, @islogicallike);
-    addParameter(p , 'SmallFootprint'   , false     , @islogicallike );
-    addParameter(p , 'regularization'   , []        , @ischar        );
-    addParameter(p , 'normalize'        , false                      );
-    addParameter(p , 'bias'             , false     , @islogicallike );
-    addParameter(p , 'target'           , []        , @ischar        );
-    addParameter(p , 'target_type'      , []        , @ischar        );
-    addParameter(p , 'sim_source'       , []        , @ischar        );
-    addParameter(p , 'sim_metric'       , []        , @ischar        );
-    addParameter(p , 'filters'          , []                         );
-    addParameter(p , 'data'             , []                         );
-    addParameter(p , 'data_varname'     , []                         );
-    addParameter(p , 'metadata'         , []        , @ischar        );
-    addParameter(p , 'metadata_varname' , []        , @ischar        );
-    addParameter(p , 'finalholdout'     , 0         , @isintegerlike );
-    addParameter(p , 'cvscheme'         , []        , @isnumeric     );
-    addParameter(p , 'cvholdout'        , []        , @isnumeric     );
-    addParameter(p , 'orientation'      , []        , @ischar        );
-    addParameter(p , 'tau'              , 0.2       , @isnumeric     );
-    addParameter(p , 'lambda'           , []        , @isnumeric     );
-    addParameter(p , 'lambda1'          , []        , @isnumeric     );
-    addParameter(p , 'LambdaSeq'        , []        , @ischar        );
-    addParameter(p , 'AdlasOpts'        , struct()  , @isstruct      );
-    addParameter(p , 'SanityCheckData'  , []        , @ischar        );
-    addParameter(p , 'SanityCheckModel' , []        , @ischar        );
+    % Model definition
+	addParameter(p , 'regularization' , []        , @ischar        );
+    addParameter(p , 'bias'             , false   , @islogicallike );
+    addParameter(p , 'lambda'           , []      , @isnumeric     );
+    addParameter(p , 'lambda1'          , []      , @isnumeric     );
+    addParameter(p , 'LambdaSeq'        , []      , @ischar        );
+    addParameter(p , 'AdlasOpts'        , struct(), @isstruct      );
+    % Target definition
+    addParameter(p , 'target_label'     , [], @ischar );
+    addParameter(p , 'target_type'      , [], @ischar );
+    addParameter(p , 'sim_source'       , [], @ischar );
+    addParameter(p , 'sim_metric'       , [], @ischar );
+    % Data definition
+    addParameter(p , 'filters'          , []                  );
+    addParameter(p , 'data'             , []                  );
+    addParameter(p , 'data_varname'     , []                  );
+    addParameter(p , 'metadata'         , [] , @ischar        );
+    addParameter(p , 'metadata_varname' , [] , @ischar        );
+    addParameter(p , 'finalholdout'     , 0  , @isintegerlike );
+    addParameter(p , 'cvscheme'         , [] , @isnumeric     );
+    addParameter(p , 'cvholdout'        , [] , @isnumeric     );
+    addParameter(p , 'orientation'      , [] , @ischar        );
+    addParameter(p , 'tau'              , 0.2, @isnumeric     );
+    % Normalization
+    addParameter(p , 'normalize_data'  , 'none'        , @ischar ); % NEW NAME!
+    addParameter(p , 'normalize_target', 'none'        , @ischar ); % NEW VARIABLE!
+    addParameter(p , 'normalizewrt'    , 'all_examples', @ischar ); % NEW VARIABLE!
+    % Permutation
+    addParameter(p , 'RandomSeed'             , []                    );
+    addParameter(p , 'PermutationTest'        , false, @islogicallike );
+    addParameter(p , 'PermutationMethod'      , 'manual', @ischar     );
+    addParameter(p , 'PermutationIndex'       , ''   , @ischar        );
+    addParameter(p , 'RestrictPermutationByCV', false, @islogicallike );
+    % Hyperband (an alternative to grid search for hyperparameter selection)
+    addParameter(p , 'HYPERBAND', [] );
+    addParameter(p , 'BRACKETS' , [] );
+    % Output control
+    addParameter(p , 'SmallFootprint', false , @islogicallike );
     addParameter(p , 'SaveResultsAs'  , 'mat'       , @isMatOrJSON   );
     addParameter(p , 'subject_id_fmt' , '%d'        , @ischar        );
+    % Debugging (none of which currently work...)
+    addParameter(p , 'SanityCheckData'  , []  , @ischar        );
+    addParameter(p , 'SanityCheckModel' , []  , @ischar        );
+    addParameter(p , 'debug'          , false , @islogicallike );
     % --- searchlight specific --- %
+    % N.B. Searchlight is currently broken.
     addParameter(p , 'searchlight'      , 0         , @islogicallike );
     addParameter(p , 'slShape'          , ''        , @ischar        );
     addParameter(p , 'slSim_Measure'    , ''        , @ischar        );
     addParameter(p , 'slRadius'         , []        , @isnumeric     );
     addParameter(p , 'slPermutationType', ''        , @ischar        );
     addParameter(p , 'slPermutations'   , 0         , @isscalar      );
+    % Parallel only influences the GLMNET operations, and should only be used
+    % when running locally. DO NOT USE ON CONDOR.
+    addParameter(p , 'PARALLEL'         , false   ,   @islogicallike );
     % Parameters in this section are unused in the analysis, may exist in
     % the parameter file because other progams use them.
-    addParameter(p , 'PARALLEL'         , false   ,   @islogicallike );
     addParameter(p , 'COPY'             , []                         );
     addParameter(p , 'URLS'             , []                         );
     addParameter(p , 'executable'       , []                         );
     addParameter(p , 'wrapper'          , []                         );
-    % Parameters in this section relate to Hyperband
-    addParameter(p , 'HYPERBAND'        , []                         );
-    addParameter(p , 'BRACKETS'         , []                         );
 
+    % Parse input parameters ...
     if nargin > 0
+        % From command line
         parse(p, varargin{:});
     else
-        jdat = loadjson('params.json');
+        % From json-formatted parameter file
+        try
+            jdat = loadjson('./params.json');
+        catch ME
+            disp('Current directory does not contain "params.json".');
+            rethrow(ME);
+        end
         fields = fieldnames(jdat);
         jcell = [fields'; struct2cell(jdat)'];
         parse(p, jcell{:});
     end
-
-    % private function.
     assertRequiredParameters(p.Results);
 
 %     DEBUG                   = p.Results.debug;
@@ -72,9 +90,11 @@ function WholeBrain_RSA(varargin)
     SmallFootprint          = p.Results.SmallFootprint;
     RandomSeed              = p.Results.RandomSeed;
     regularization          = p.Results.regularization;
-    normalize               = p.Results.normalize;
+    normalizewrt            = p.Results.normalizewrt;
+    normalize_data          = p.Results.normalize_data;
+    normalize_target        = p.Results.normalize_target;
     BIAS                    = p.Results.bias;
-    target_label            = p.Results.target;
+    target_label            = p.Results.target_label;
     target_type             = p.Results.target_type;
     sim_source              = p.Results.sim_source;
     sim_metric              = p.Results.sim_metric;
@@ -147,8 +167,6 @@ function WholeBrain_RSA(varargin)
     metadata = StagingContainer.(metadata_varname); clear StagingContainer;
     [metadata, subjix] = subsetMetadata(metadata, datafiles, FMT_subjid);
 %     N = length(metadata);
-    n = [metadata.nrow];
-    d = [metadata.ncol];
 
     %% Load data
     X = cell(max(subjix),1);
@@ -177,8 +195,8 @@ function WholeBrain_RSA(varargin)
     for i = subjix
         M = selectbyfield(metadata,'subject', i);
         if isempty(filter_labels)
-            rowfilter{i} = true(1,n(i));
-            colfilter{i} = true(1,d(i));
+            rowfilter{i} = true(1,M.nrow);
+            colfilter{i} = true(1,M.ncol);
         else
             [rowfilter{i},colfilter{i}] = composeFilters(M.filters, filter_labels);
         end
@@ -201,13 +219,7 @@ function WholeBrain_RSA(varargin)
     fprintf('%12s: %s\n', 'sim_source', sim_source);
     fprintf('%12s: %s\n', 'sim_metric', sim_metric);
     fprintf('\n');
-    
-    sep = strfind(target_type,'_');
-    if ~isempty(sep)
-        target_normalization = target_type(sep(1)+1:end);
-        target_type(sep(1):end) = [];
-    end
- 
+
     tmpS = selectTargets(metadata, target_type, target_label, sim_source, sim_metric, rowfilter(subjix));
     S = cell(max(subjix),1);
     for i = 1:numel(tmpS);
@@ -236,9 +248,9 @@ function WholeBrain_RSA(varargin)
         fprintf('%16d (%6d,%6d) (%6d,%6d)\n',i,numel(rowfilter{i}),numel(colfilter{i}),size(X{i},1),size(X{i},2));
     end
     fprintf('\n');
-    
+
     fprintf('Data loaded and processed.\n');
-    
+
     C = cell(max(subjix),1);
     for i = subjix
         switch target_type
@@ -249,9 +261,15 @@ function WholeBrain_RSA(varargin)
                 C{i} = S{i};
 %                 r = size(C{i},2);
         end
-        switch target_normalization
-            case 'centered'
-                C{i} = bsxfun(@minus, C{i}, mean(C{i}));
+        if size(C{i},1) < size(X{i},1)
+            remainder = rem(size(X{i},1), size(C{i},1));
+            if remainder > 0
+                error('C has fewer rows than X, and number in X is not evenly divisible by number in C.');
+            else
+                repeatntimes = size(X{i},1) ./ size(C{i},1);
+                warning('C has fewer rows than X, and number in X is evenly divisible by number in C. Repeating C %d times to match.', repeatntimes);
+                C{i} = repmat(C{i}, repeatntimes, 1);
+            end
         end
     end
 
@@ -272,6 +290,8 @@ function WholeBrain_RSA(varargin)
     % PERMUTATION_INDEXES.mat
     fprintf('PermutationTest: %d\n', PermutationTest);
     if PermutationTest
+        [a,b] = ndgrid(subjix,RandomSeed);
+        Permutations = struct('subject', num2cell(a),'RandomSeed', num2cell(b),'index',[]);
         switch PermutationMethod
 %                 case 'simple'
 %                     if RestrictPermutationByCV
@@ -283,21 +303,30 @@ function WholeBrain_RSA(varargin)
                 StagingArea = load(PermutationIndex, 'PERMUTATION_INDEX');
                 PERMUTATION_INDEX = StagingArea.PERMUTATION_INDEX;
                 for i = subjix
-                    %  This is kind of a hack to handle the fact eliminating
-                    %  outlying rows and rows belonging to the final holdout
-                    %  set will create gaps in the index.
-                    [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, RandomSeed));
-                    [~, permutation_index] = sort(ix);
-                    PERMUTATION_INDEX{i} = permutation_index;
+                    for j = RandomSeed
+                        P = selectbyfield(Permutations,'subject',i,'RandomSeed',j);
+                        %  This is kind of a hack to handle the fact eliminating
+                        %  outlying rows and rows belonging to the final holdout
+                        %  set will create gaps in the index.
+                        [~, ix] = sort(PERMUTATION_INDEX{i}(rowfilter{i}, j));
+                        [~, permutation_index] = sort(ix);
+                        if size(permutation_index, 1) < size(C{i}, 1)
+                            permutation_index = extend_permutation_index(permutation_index, size(C{i}, 1));
+                        end
+                        P.index = permutation_index;
+                        Permutations = replacebyfield(Permutations, P, 'subject', i, 'RandomSeed', j);
+                    end
                 end
             otherwise
                 error('crcox:NotImplemented', 'Permutations need to be specified manually.');
         end
     else
-        PERMUTATION_INDEX = cell(max(subjix),1);
+        RandomSeed = 0;
+        Permutations = struct('subject', num2cell(subjix), 'RandomSeed', 0, 'index',[]);
         for i = subjix
-            PERMUTATION_INDEX{i} = (1:size(C{i}, 1))';
-            RandomSeed = 0;
+            P = selectbyfield(Permutations,'subject',i,'RandomSeed',0);
+            P.index = (1:size(C{i}, 1))';
+            Permutations = replacebyfield(Permutations, P, 'subject', i, 'RandomSeed', 0);
         end
     end
 
@@ -306,17 +335,19 @@ function WholeBrain_RSA(varargin)
         % Grid search
         AdlasInstances = AdlasContainer( ...
             'subject', subjix, ...
-            'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
+            'RandomSeed', RandomSeed, ...
             'cvholdout', cvholdout, ...
             'bias', BIAS, ...
             'LambdaSeq', LambdaSeq, ...
-            'normalize', normalize, ...
+            'normalize_data', normalize_data, ...
+            'normalize_target', normalize_target, ...
+            'normalizewrt', normalizewrt, ...
             'regularization', regularization, ...
             'lambda', lambda, ...
             'lambda1', lambda1);
         AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
             'cvind'          , cvind          , ...
-            'permutations'   , PERMUTATION_INDEX, ... 
+            'permutations'   , Permutations, ... 
             'AdlasOpts'      , opts);
 
     else
@@ -326,16 +357,18 @@ function WholeBrain_RSA(varargin)
         else
             AdlasInstances = AdlasContainer( ...
                 'subject', subjix, ...
-                'RandomSeed', 1:size(PERMUTATION_INDEX{end},2), ...
+                'RandomSeed', RandomSeed, ...
                 'cvholdout', cvholdout, ...
                 'bias', BIAS, ...
                 'LambdaSeq', LambdaSeq, ...
-                'normalize', normalize, ...
+                'normalize_data', normalize_data, ...
+                'normalize_target', normalize_target, ...
+                'normalizewrt', normalizewrt, ...
                 'regularization', regularization, ...
                 'HYPERBAND', struct('lambda', lambda, 'lambda1', lambda1));
             bracket_index = 1;
         end
-    
+
         n = BRACKETS.n;
         r = BRACKETS.r;
         while 1
@@ -344,7 +377,7 @@ function WholeBrain_RSA(varargin)
             disp(lambda);
             AdlasInstances = learn_similarity_encoding(AdlasInstances, C, X, regularization,...
                 'cvind'          , cvind          , ...
-                'permutations'   , PERMUTATION_INDEX, ... 
+                'permutations'   , Permutations, ... 
                 'AdlasOpts'      , opts);
             % Delete low ranked configurations:
             AdlasInstances = hyperband_pick_top_n(AdlasInstances, n(bracket_index));
@@ -362,36 +395,48 @@ function WholeBrain_RSA(varargin)
             end
         end
     end
-    
+
     %% --- Package results ---
     results = repmat(struct( ...
         'Uz'             , [] , ...
         'Cz'             , [] , ...
         'Sz'             , [] , ...
-        'nz_rows'        , [] , ...
+        'target_label'   , [] , ...
+        'target_type'    , [] , ...
+        'sim_source'     , [] , ...
+        'sim_metric'     , [] , ...
+        'data'           , [] , ...
+        'data_varname'   , [] , ...
+        'metadata'       , [] , ...
+        'metadata_varname', [] , ...
         'subject'        , [] , ...
         'cvholdout'      , [] , ...
         'finalholdout'   , [] , ...
+        'regularization' , [] , ...
         'lambda'         , [] , ...
         'lambda1'        , [] , ...
         'LambdaSeq'      , [] , ...
-        'regularization' , [] , ...
+        'tau'            , [] , ...
         'bias'           , [] , ...
-        'normalize'      , [] , ...
+        'normalizewrt'   , [] , ...
+        'normalize_data' , [] , ...
+        'normalize_target', [], ...
+        'nz_rows'        , [] , ...
         'nzv'            , [] , ...
+        'nvox'           , [] , ...
         'coords'         , [] , ...
         'err1'           , [] , ...
         'err2'           , [] , ...
         'iter'           , [] ), numel(AdlasInstances), 1);    
     for iResult = 1:numel(AdlasInstances)
         A = AdlasInstances(iResult);
+        if A.bias
+            Uz = A.Adlas.X(1:end-1,:);
+        else
+            Uz = A.Adlas.X;
+        end
         if ~SmallFootprint
             results(iResult).coords = COORDS;
-            if A.bias
-                Uz = A.Adlas.X(1:end-1,:);
-            else
-                Uz = A.Adlas.X;
-            end
             ix = find(any(Uz, 2));
             for j = 1:numel(COORDS_FIELDS)
                 cfield = COORDS_FIELDS{j};
@@ -403,19 +448,35 @@ function WholeBrain_RSA(varargin)
             end
             results(iResult).Uz = Uz;
             results(iResult).Cz = A.Adlas.A * A.Adlas.X;
-            results(iResult).nz_rows = any(Uz,2);
-            results(iResult).cvholdout = A.cvholdout;
-            results(iResult).finalholdout = finalholdout;
-            results(iResult).lambda = A.lambda;
-            results(iResult).lambda1 = A.lambda1;
-            results(iResult).LambdaSeq = A.LambdaSeq;
-            results(iResult).regularization = A.regularization;
-            results(iResult).normalize = A.normalize;
-            results(iResult).err1 = A.Adlas.testError;
-            results(iResult).err2 = A.Adlas.trainingError;
-            results(iResult).iter = A.Adlas.iter;
-            results(iResult).RandomSeed = RandomSeed(A.RandomSeed);
         end
+        results(iResult).subject = A.subject;
+        results(iResult).bias = A.bias;
+        results(iResult).nz_rows = any(Uz,2);
+        results(iResult).nzv = nnz(results(iResult).nz_rows);
+        results(iResult).nvox = numel(results(iResult).nz_rows);
+        results(iResult).cvholdout = A.cvholdout;
+        results(iResult).finalholdout = finalholdoutInd;
+        results(iResult).lambda = A.lambda;
+        results(iResult).lambda1 = A.lambda1;
+        results(iResult).LambdaSeq = A.LambdaSeq;
+        results(iResult).regularization = A.regularization;
+        results(iResult).tau = tau;
+        results(iResult).normalize_data = A.normalize_data;
+        results(iResult).normalize_target = normalize_target;
+        results(iResult).normalizewrt = A.normalizewrt;
+        results(iResult).data = p.Results.data;
+        results(iResult).data_var = p.Results.data_varname;
+        results(iResult).metadata = p.Results.metadata;
+        results(iResult).metadata_var = p.Results.metadata_varname;
+        results(iResult).target_label = p.Results.target_label;
+        results(iResult).target_type = p.Results.target_type;
+        results(iResult).sim_source = p.Results.sim_source;
+        results(iResult).sim_metric = p.Results.sim_metric;
+        results(iResult).err1 = A.Adlas.testError;
+        results(iResult).err2 = A.Adlas.trainingError;
+        results(iResult).iter = A.Adlas.iter;
+        results(iResult).RandomSeed = A.RandomSeed;
+%         results(iResult).RandomSeed = p.Results.PermutationIndex;
     end
 
     fprintf('Saving stuff.....\n');
@@ -550,7 +611,7 @@ function [lam, lam1, lamSeq] = verifyLambdaSetup(regularization, lambda, lambda1
 end
 
 function assertRequiredParameters(params)
-    required = {'target','sim_metric','sim_source','data', ...
+    required = {'target_label','sim_metric','sim_source','data', ...
         'metadata','cvscheme','cvholdout','finalholdout','orientation'};
     N = length(required);
     for i = 1:N
@@ -560,6 +621,20 @@ function assertRequiredParameters(params)
     end
 end
 
+function permutation_index = extend_permutation_index(permutation_index, target_length)
+    remainder = rem(target_length, size(permutation_index, 1));
+    if remainder > 0
+        error('permutation_index has fewer rows than C, and number in C is not evenly divisible by number in permutation_index.');
+    else
+        repeatntimes = target_length / size(permutation_index,1);
+        warning('permutation_index has fewer rows than C, and number in C is evenly divisible by number in permutation_index. Repeating permutation_index %d times to match.', repeatntimes);
+        CC = cell(repeatntimes, 1);
+        for k = 1:repeatntimes
+            CC{k} = permutation_index + (size(permutation_index, 1) * (k-1));
+        end
+        permutation_index = cell2mat(CC);
+    end
+end
 function b = islogicallike(x)
     b = any(x == [1,0]);
 end

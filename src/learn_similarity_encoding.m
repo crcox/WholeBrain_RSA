@@ -22,10 +22,6 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
     permutations   = p.Results.permutations;
     options        = p.Results.AdlasOpts;
     VERBOSE        = p.Results.Verbose;
-    
-    if strcmp(regularization, {'grOWL','grOWL2'});
-        assert(~isempty(LambdaSeq),'A LambdaSeq type (linear or exponential) must be set when using grOWL*');
-    end
 
     Vorig = V;
     Corig = C;
@@ -33,15 +29,19 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
     if VERBOSE
         fprintf('%8s%8s%8s%8s%8s%8s%8s%8s%16s\n', 'cv','lam','lam1','err1','err2','nzvox','nvox','iter','status')
     end
+%     fprintf('Normalize with respect to: %s\n', strrep(normalizewrt,'_',' '));
+%     fprintf('- Normalizing the data: %s ...\n', normalize_data);
+%     fprintf('- Normalizing the target dimensions: %s ...\n', normalize_target);
 
     for i = 1:numel(AdlasInstances)
         subix = AdlasInstances(i).subject;
-        permix = AdlasInstances(i).RandomSeed;
         cvix = AdlasInstances(i).cvholdout;
         regularization = AdlasInstances(i).regularization;
-        normalize = AdlasInstances(i).normalize;
+        normalize_data = AdlasInstances(i).normalize_data;
+        normalize_target = AdlasInstances(i).normalize_target;
+        normalizewrt = AdlasInstances(i).normalizewrt;
         BIAS = AdlasInstances(i).bias;
-        permutation_index = permutations{subix}(:,permix);
+        P = selectbyfield(permutations,'subject', subix, 'RandomSeed', AdlasInstances(i).RandomSeed);
         lam = AdlasInstances(i).lambda;
         lam1 = AdlasInstances(i).lambda1;
         LambdaSeq = AdlasInstances(i).LambdaSeq;
@@ -49,37 +49,15 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         train_set  = cvind{subix} ~= cvix; % CHECK THIS
 
         V = Vorig{subix};
-        switch lower(normalize)
-            case 'zscore_train'
-                mm = mean(V(train_set,:),1);
-                ss = std(V(train_set,:),0,1);
-            case 'zscore'
-                mm = mean(V,1);
-                ss = std(V,0,1);
-            case 'stdev_train'
-                mm = zeros(1, size(V,2));
-                ss = std(V(train_set,:),0,1);
-            case 'stdev'
-                mm = zeros(1, size(V,2));
-                ss = std(V,0,1);
-            case '2norm_train'
-                mm = mean(V(train_set,:),1);
-                ss = norm(V(train_set,:));
-            case '2norm'
-                mm = mean(V,1);
-                ss = norm(V);
-            otherwise
-                error('Unrecognized normalizaion method! Exiting...')
-        end
-        z = ss > 0;
-        V(:,z) = bsxfun(@minus,V(:,z), mm(z));
-        V(:,z) = bsxfun(@rdivide,V(:,z), ss(z));
-        if any(~z)
-            warning('There are %d constant-valued voxels. These voxels are not normalized.', sum(z));
-            if VERBOSE
-                fprintf('Constant-valued voxel indexes:\n');
-                disp(find(~z));
-            end
+        C = Corig{subix}(P.index,:);
+        switch normalizewrt
+            case 'all_examples'
+                V = normalize_columns(V, normalize_data);
+                C = normalize_columns(C, normalize_target);
+                
+            case 'training_set'
+                V = normalize_columns(V, normalize_data, train_set);
+                C = normalize_columns(C, normalize_target, train_set);
         end
 
         if BIAS
@@ -102,9 +80,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
             otherwise
                 error('%s is not an implemented regularization. check spelling', regularization);
         end
-        
-        C = Corig{subix}(permutation_index,:);
-        
+
         % TRAINING CONDITIONS
         % ===================
         % In case of new model:
@@ -114,7 +90,7 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         %
         % In case of existing model:
         % -------------------------
-        %   1. Check that status == 2, which means that the previos round
+        %   1. Check that status == 2, which means that the previous round
         %   of training stopped because it hit the iteration limit.
         %   2. If so, train for more iterations.
         %
@@ -153,6 +129,42 @@ function AdlasInstances = learn_similarity_encoding(AdlasInstances, C, V, regula
         if VERBOSE
             fprintf('%8d%8.2f%8.2f%8.2f%8.2f%8d%8d%8d%16s\n', ...
                 cvix,lam,lam1,err1,err2,Unz,nv,AdlasInstances(i).Adlas.iter,AdlasInstances(i).Adlas.message);
+        end
+    end
+end
+
+function y = normalize_columns(x, method, wrt)
+    if nargin < 3
+        wrt = true(size(x,1),1);
+    end
+    % By default, subtract zero from each column.
+    mm = zeros(1, size(x,2));
+    % By default, divide each column by one.
+    ss = ones(1, size(x,2));
+    switch lower(method)
+        case {'zscore','zscored'}
+            mm = mean(x(wrt,:),1);
+            ss = std(x(wrt,:),0,1);
+        case {'center','centered','centre','centred'}
+            mm = mean(x(wrt,:),1);
+        case 'stdev'
+            ss = std(x(wrt,:),0,1);
+        case '2norm'
+            mm = mean(x(wrt,:),1);
+            ss = norm(x(wrt,:));
+        otherwise
+            error('Unrecognized normalizaion method "%s"! Exiting...', method);
+    end
+    % Avoid dividing by zero, when columns have constant value.
+    z = ss > 0;
+    y(:,z) = bsxfun(@minus,x(:,z), mm(z));
+    y(:,z) = bsxfun(@rdivide,y(:,z), ss(z));
+    
+    if any(~z)
+        warning('There are %d constant-valued voxels. These voxels are not normalized.', sum(z));
+        if VERBOSE
+            fprintf('Constant-valued voxel indexes:\n');
+            disp(find(~z));
         end
     end
 end
@@ -221,7 +233,7 @@ end
 % results(iii).LambdaSeq      = LambdaSeq;
 % results(iii).regularization = regularization;
 % results(iii).bias           = BIAS;
-% results(iii).normalize      = normalize;
+% results(iii).normalize_data = normalize_data;
 % 
 % if any(test_set)
 %     results(iii).err1 = norm(Ch - Chz,'fro')/norm(Ch,'fro');
